@@ -1,8 +1,8 @@
 # Sistema Runner
 
 **Disciplina:** Implementação e Integração — BES/UFG (2026-1)  
-**Aluno:** `<seu nome aqui>`  
-**Matrícula:** `<sua matrícula aqui>`
+**Aluno:** `Davi Augusto Fererira de Carvalho`  
+**Matrícula:** `202403066`
 
 ---
 
@@ -18,11 +18,10 @@ Os documentos oficiais do trabalho estão no repositório do professor:
 
 | Documento | Descrição |
 |-----------|-----------|
-| [especificacao.md](<URL-repo-professor>/blob/main/especificacao.md) | Épicos, critérios de aceitação e escopo |
-| [docs/plano-revisitado-v2.md](<URL-repo-professor>/blob/main/docs/plano-revisitado-v2.md) | Histórias derivadas e sprints |
-| [design.md](<URL-repo-professor>/blob/main/design.md) | Modelo C4 (contexto e contêineres) |
+| [especificacao.md](github.com/kyriosdata/runner/blob/main/especificacao.md) | Épicos, critérios de aceitação e escopo |
+| [docs/plano-revisitado-v2.md](github.com/kyriosdata/runner/blob/main/docs/plano-revisitado-v2.md) | Histórias derivadas e sprints |
+| [design.md](github.com/kyriosdata/runner/blob/main/design.md) | Modelo C4 (contexto e contêineres) |
 
-> Substitua `<URL-repo-professor>` pela URL do repositório da disciplina.
 
 ## Épicos
 
