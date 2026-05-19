@@ -1,0 +1,76 @@
+# ── Go ────────────────────────────────────────────────────────────────────────
+
+# Binários compilados
+/dist/
+cmd/assinatura/assinatura
+cmd/assinatura/assinatura.exe
+cmd/simulador/simulador
+cmd/simulador/simulador.exe
+
+# Artefatos de release gerados pelo CI (nunca commitados)
+assinatura-*
+simulador-*
+
+# Cache de teste e cobertura
+*.test
+*.out
+coverage.html
+
+# Vendor (se não usar go mod vendor)
+vendor/
+
+# ── Java / Maven ──────────────────────────────────────────────────────────────
+
+assinador/target/
+assinador/.mvn/wrapper/maven-wrapper.jar
+*.class
+*.jar
+!assinador/src/**/*.jar
+
+# Maven local repo (caso o CI use -Dmaven.repo.local)
+.m2/
+
+# ── Runtime do Sistema Runner ─────────────────────────────────────────────────
+
+# JRE e artefatos baixados automaticamente pelo CLI
+# (ficam em ~/.hubsaude/ — fora do repo — mas protege se alguém colocar aqui)
+.hubsaude/
+
+# ── IDEs ──────────────────────────────────────────────────────────────────────
+
+# JetBrains (IntelliJ, GoLand)
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Eclipse
+.classpath
+.project
+.settings/
+bin/
+
+# ── Sistema Operacional ───────────────────────────────────────────────────────
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# ── Variáveis de ambiente ─────────────────────────────────────────────────────
+
+.env
+.env.local
+*.env

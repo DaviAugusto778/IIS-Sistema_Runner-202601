@@ -1,26 +1,102 @@
-# Sistema Runner 🏃‍♂️
+# Sistema Runner
 
+**Disciplina:** Implementação e Integração — BES/UFG (2026-1)  
+**Aluno:** `<seu nome aqui>`  
+**Matrícula:** `<sua matrícula aqui>`
 
-O **Sistema Runner** é um conjunto de ferramentas de linha de comando (CLI) desenvolvido para simplificar e abstrair a execução de aplicações Java associadas à Plataforma HubSaúde. Ele elimina a necessidade de configurações manuais de ambiente (como instalação do JDK) por parte dos usuários e integradores.
+---
 
-## 🎯 Escopo da Primeira Iteração
+## O que é
 
-Nesta primeira fase de construção, nosso foco está em estabelecer a infraestrutura base e implementar a comunicação essencial:
+O Sistema Runner é uma ferramenta de linha de comandos (CLI) multiplataforma que permite executar aplicações Java — especificamente o **assinador.jar** e o **Simulador HubSaúde** — sem que o usuário precise instalar ou configurar o JDK manualmente. O sistema detecta (ou baixa) o Java necessário, invoca as aplicações com os parâmetros corretos e apresenta os resultados de forma legível no terminal.
 
-- [ ] **Setup do repositório**: Estruturação dos diretórios para o código CLI (Go/Rust/Python/etc.) e o código Java (`assinador.jar`).
-- [ ] **CLI Base (`assinatura`)**: Criação da estrutura de comandos no terminal (parsing de argumentos).
-- [ ] **Módulo `assinador.jar` (Esqueleto)**: Implementação da classe principal em Java capaz de receber parâmetros via linha de comando e responder com um log de sucesso/erro.
-- [ ] **US-01 (Parcial)**: Invocação local direta do `assinador.jar` a partir do CLI.
+O contexto é a plataforma **HubSaúde**, um esforço conjunto da SES-GO e UFG para interoperabilidade de dados em saúde.
 
-## 🏗️ Arquitetura (Visão Geral)
+## Documentação de referência
 
-O projeto baseia-se no modelo C4 e é composto por três componentes principais na visão de contêineres:
+Os documentos oficiais do trabalho estão no repositório do professor:
 
-1. **CLI de Assinatura (`assinatura`)**: Interface nativa para o usuário.
-2. **CLI do Simulador (`simulador`)**: Gerenciador do ciclo de vida da aplicação HubSaúde.
-3. **Módulo Core (`assinador.jar`)**: Motor de validação e simulação escrito em Java.
+| Documento | Descrição |
+|-----------|-----------|
+| [especificacao.md](<URL-repo-professor>/blob/main/especificacao.md) | Épicos, critérios de aceitação e escopo |
+| [docs/plano-revisitado-v2.md](<URL-repo-professor>/blob/main/docs/plano-revisitado-v2.md) | Histórias derivadas e sprints |
+| [design.md](<URL-repo-professor>/blob/main/design.md) | Modelo C4 (contexto e contêineres) |
+
+> Substitua `<URL-repo-professor>` pela URL do repositório da disciplina.
+
+## Épicos
+
+| Épico | Descrição | Situação |
+|-------|-----------|----------|
+| US-01 | Invocar assinador.jar via CLI (modo local e modo servidor HTTP) | 🔄 Em andamento |
+| US-02 | Simular assinatura digital com validação rigorosa de parâmetros | 🔄 Em andamento |
+| US-03 | Gerenciar ciclo de vida do Simulador HubSaúde via CLI | ⏳ Pendente |
+| US-04 | Provisionar JDK automaticamente (detecção e download) | 🔄 Em andamento |
+| US-05 | Disponibilizar binários multiplataforma via GitHub Releases | ✅ Concluído |
+
+## Como rodar
+
+> Esta seção será preenchida conforme a implementação avança.
 
 ### Pré-requisitos
-* [Ferramenta de compilação da linguagem escolhida para o CLI]
-* Java Development Kit (JDK) 17 ou superior
-* Maven ou Gradle (para o `assinador.jar`)
+
+```
+# A preencher: versão do Go, dependências externas, etc.
+```
+
+### Compilar localmente
+
+```bash
+# A preencher
+```
+
+### Executar o CLI `assinatura`
+
+```bash
+# Exibir versão
+assinatura version
+
+# Criar assinatura (a preencher conforme Sprint 2)
+# assinatura sign --content <...>
+
+# Validar assinatura (a preencher conforme Sprint 2)
+# assinatura validate --content <...> --signature <...>
+
+# Iniciar modo servidor (a preencher conforme Sprint 3)
+# assinatura start
+```
+
+### Executar o CLI `simulador`
+
+```bash
+# A preencher na Sprint 4
+# simulador start
+# simulador stop
+# simulador status
+```
+
+### Verificar integridade dos binários baixados
+
+```bash
+# Verificar checksum SHA256
+sha256sum -c assinatura-<versão>-<os>-<arch>.sha256
+
+# Verificar assinatura Cosign
+cosign verify-blob \
+  --certificate assinatura-<versão>-<os>-<arch>.pem \
+  --signature  assinatura-<versão>-<os>-<arch>.sig \
+  assinatura-<versão>-<os>-<arch>
+```
+
+## Status do projeto
+
+| Sprint | Foco | Histórias | Estado |
+|--------|------|-----------|--------|
+| 1 | Fundação: estrutura Go, CI/CD, releases, Cosign | US-01.1, US-05.1, US-05.2, US-05.3 | ✅ Concluída |
+| 2 | Fluxo ponta-a-ponta local: sign/validate via `java -jar` | US-02.1–02.3, US-01.2–01.4, US-04.1 | 🔄 Em andamento |
+| 3 | Modo servidor HTTP e dispositivo criptográfico (PKCS#11) | US-02.4–02.5, US-01.5–01.9 | ⏳ Pendente |
+| 4 | CLI simulador e download dinâmico do simulador.jar | US-03.1–03.4 | ⏳ Pendente |
+
+## Licença
+
+A definir.
