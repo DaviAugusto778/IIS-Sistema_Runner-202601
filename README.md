@@ -92,7 +92,7 @@ cosign verify-blob \
 | Sprint | Foco | Histórias | Estado |
 |--------|------|-----------|--------|
 | 1 | Fundação: estrutura Go, CI/CD, releases, Cosign | US-01.1, US-05.1, US-05.2, US-05.3 | ✅ Concluída |
-| 2 | Fluxo ponta-a-ponta local: sign/validate via `java -jar` | US-02.1–02.3, US-01.2–01.4, US-04.1 | 🔄 Em andamento |
+| 2 | Fluxo ponta-a-ponta local: sign/validate via `java -jar` | US-02.1–02.3, US-01.2–01.4, US-04.1 | ✅ Concluída  |
 | 3 | Modo servidor HTTP e dispositivo criptográfico (PKCS#11) | US-02.4–02.5, US-01.5–01.9 | ⏳ Pendente |
 | 4 | CLI simulador e download dinâmico do simulador.jar | US-03.1–03.4 | ⏳ Pendente |
 
