@@ -1,0 +1,22 @@
+{
+  "validador": {
+    "url": "https://github.com/kyriosdata/runner/releases/download/hubsaude-validador-api-v0.1.8/hubsaude-validador-api-0.1.8-exec.jar",
+    "version": "0.1.8",
+    "tag": "hubsaude-validador-api-v0.1.8",
+    "sha256": "0dab9943629f5b1f9064e4302b380ecfbaa0e4da2b991e8b66e9795d5665607a"
+  },
+  "simulador": {
+    "url": "https://github.com/kyriosdata/runner/releases/download/hubsaude-simulador-v0.1.7/hubsaude-simulador-0.1.7.jar",
+    "version": "0.1.7",
+    "tag": "hubsaude-simulador-v0.1.7",
+    "sha256": "0e7694011f91552e1ce11c2d2b386ace3eed0cb46863c7226c7920d5441408ab"
+  },
+  "jre": {
+    "windows_x64": "https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jre/hotspot/normal/eclipse",
+    "windows_arm64": "https://api.adoptium.net/v3/binary/latest/21/ga/windows/aarch64/jre/hotspot/normal/eclipse",
+    "linux_x64": "https://api.adoptium.net/v3/binary/latest/21/ga/linux/x64/jre/hotspot/normal/eclipse",
+    "linux_arm64": "https://api.adoptium.net/v3/binary/latest/21/ga/linux/aarch64/jre/hotspot/normal/eclipse",
+    "mac_x64": "https://api.adoptium.net/v3/binary/latest/21/ga/mac/x64/jre/hotspot/normal/eclipse",
+    "mac_arm64": "https://api.adoptium.net/v3/binary/latest/21/ga/mac/aarch64/jre/hotspot/normal/eclipse"
+  }
+}
