@@ -69,7 +69,7 @@ func ParseFile(path string) (*Manifest, error) {
 	if err != nil {
 		return nil, fmt.Errorf("release: abrir %q: %w", path, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return Parse(f)
 }
 
