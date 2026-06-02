@@ -52,10 +52,10 @@ func runAndPassthrough(args ...string) error {
 		os.Exit(2)
 	}
 	if len(result.Stderr) > 0 {
-		os.Stderr.Write(result.Stderr)
+		_, _ = os.Stderr.Write(result.Stderr)
 	}
 	if len(result.Stdout) > 0 {
-		os.Stdout.Write(result.Stdout)
+		_, _ = os.Stdout.Write(result.Stdout)
 	}
 	os.Exit(result.ExitCode)
 	return nil

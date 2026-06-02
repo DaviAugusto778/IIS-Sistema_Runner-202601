@@ -1,3 +1,6 @@
+// Package invoker executa o assinador.jar como subprocesso, propagando
+// stdout, stderr e exit code conforme o contrato CLI<->JAR descrito em
+// docs/adr/0003-contrato-cli-jar.md.
 package invoker
 
 import (

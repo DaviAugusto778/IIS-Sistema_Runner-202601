@@ -7,9 +7,12 @@ import (
 )
 
 var (
+	// Version é a versão semântica do CLI, injetada via -ldflags no build do CI.
 	Version = "dev"
-	Commit  = "none"
-	Date    = "unknown"
+	// Commit é o SHA curto do HEAD, injetado via -ldflags no build do CI.
+	Commit = "none"
+	// Date é o timestamp UTC do build em RFC3339, injetado via -ldflags no CI.
+	Date = "unknown"
 )
 
 var versionCmd = &cobra.Command{

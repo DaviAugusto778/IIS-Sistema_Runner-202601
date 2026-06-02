@@ -12,8 +12,10 @@ linters:
     - ineffassign
     - staticcheck
     - unused
-    - misspell
     - revive
+  # misspell deliberadamente desativado: o codigo e a documentacao
+  # estao em pt-BR e o linter so suporta locales de ingles, gerando
+  # falsos positivos em palavras como "comando" e "argumentos".
 
   settings:
     revive:
