@@ -14,13 +14,15 @@ O contexto é a plataforma **HubSaúde**, um esforço conjunto da SES-GO e UFG p
 
 ## Documentação de referência
 
-Os documentos oficiais do trabalho estão no repositório do professor:
+Os documentos oficiais do trabalho estão no repositório do professor, fixados no commit `4d7d40f` para garantir rastreabilidade:
 
 | Documento | Descrição |
 |-----------|-----------|
-| [especificacao.md](github.com/kyriosdata/runner/blob/main/especificacao.md) | Épicos, critérios de aceitação e escopo |
-| [docs/plano-revisitado-v2.md](github.com/kyriosdata/runner/blob/main/docs/plano-revisitado-v2.md) | Histórias derivadas e sprints |
-| [design.md](github.com/kyriosdata/runner/blob/main/design.md) | Modelo C4 (contexto e contêineres) |
+| [especificacao.md](https://github.com/kyriosdata/runner/blob/4d7d40f/especificacao.md) | Épicos, critérios de aceitação e escopo |
+| [docs/plano-revisitado-v2.md](https://github.com/kyriosdata/runner/blob/4d7d40f/docs/plano-revisitado-v2.md) | Histórias derivadas e sprints |
+| [design.md](https://github.com/kyriosdata/runner/blob/4d7d40f/design.md) | Modelo C4 (contexto e contêineres) |
+| [docs/criterios.md](https://github.com/kyriosdata/runner/blob/4d7d40f/docs/criterios.md) | Critérios de aceitação (definição de "pronto") |
+| [release.json](https://github.com/kyriosdata/runner/blob/4d7d40f/release.json) | Manifesto dos artefatos validador/simulador + JREs |
 
 
 ## Épicos
@@ -39,30 +41,37 @@ Os documentos oficiais do trabalho estão no repositório do professor:
 
 ### Pré-requisitos
 
-```
-# A preencher: versão do Go, dependências externas, etc.
-```
+- Go 1.25 ou superior (para compilar a CLI)
+- JDK 21 e Maven (para compilar o `assinador.jar`)
+- Em runtime, o usuário final só precisa de Java 21 instalado (ou aguardar US-04, que provisiona JRE automaticamente)
 
 ### Compilar localmente
 
 ```bash
-# A preencher
+# Compilar o assinador.jar (a partir da raiz do repo)
+cd assinador && ./mvnw package && cd ..
+
+# Compilar a CLI assinatura
+go build -o assinatura ./
+
+# Colocar o jar ao lado do binário (ou exportar ASSINADOR_JAR=<caminho>)
+cp assinador/target/assinador.jar .
 ```
 
 ### Executar o CLI `assinatura`
 
 ```bash
 # Exibir versão
-assinatura version
+./assinatura version
 
-# Criar assinatura (a preencher conforme Sprint 2)
-# assinatura sign --content <...>
+# Criar assinatura (modo local)
+./assinatura sign --content "texto a assinar"
 
-# Validar assinatura (a preencher conforme Sprint 2)
-# assinatura validate --content <...> --signature <...>
+# Validar assinatura
+./assinatura validate --content "texto a assinar" --signature "<assinatura>"
 
-# Iniciar modo servidor (a preencher conforme Sprint 3)
-# assinatura start
+# Iniciar modo servidor HTTP (planejado para Sprint 3 — US-01.5+)
+# ./assinatura start
 ```
 
 ### Executar o CLI `simulador`
@@ -98,4 +107,4 @@ cosign verify-blob \
 
 ## Licença
 
-A definir.
+Distribuído sob a [Licença MIT](LICENSE).
