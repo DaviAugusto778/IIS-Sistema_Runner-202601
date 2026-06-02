@@ -2,6 +2,11 @@
 
 # Binários compilados
 /dist/
+/assinatura
+/assinatura.exe
+/simulador
+/simulador.exe
+/assinador.jar
 cmd/assinatura/assinatura
 cmd/assinatura/assinatura.exe
 cmd/simulador/simulador

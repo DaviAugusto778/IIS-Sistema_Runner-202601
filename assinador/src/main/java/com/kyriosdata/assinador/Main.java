@@ -4,7 +4,19 @@ import com.kyriosdata.assinador.domain.SignRequest;
 import com.kyriosdata.assinador.domain.SignatureResponse;
 import com.kyriosdata.assinador.domain.ValidateRequest;
 
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+
 public class Main {
+
+    static {
+        // Garante UTF-8 nos streams independente do encoding do console
+        // (critério D da especificacao@4d7d40f: "Encoding UTF-8 declarado").
+        // Em Windows, o default de System.out é cp1252, o que corrompe
+        // acentos no JSON de saída.
+        System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8));
+        System.setErr(new PrintStream(System.err, true, StandardCharsets.UTF_8));
+    }
 
     public static void main(String[] args) {
         if (args.length == 0) {

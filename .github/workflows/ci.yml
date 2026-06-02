@@ -73,6 +73,17 @@ jobs:
         shell: bash
         run: ./assinatura${{ runner.os == 'Windows' && '.exe' || '' }} version
 
+      - name: Smoke test UTF-8 (criterio D)
+        shell: bash
+        run: |
+          cp assinador/target/assinador.jar .
+          out=$(./assinatura${{ runner.os == 'Windows' && '.exe' || '' }} sign 2>&1 || true)
+          echo "$out"
+          if ! echo "$out" | grep -q "Parâmetro"; then
+            echo "ERRO: saida sem acentos UTF-8 — encoding quebrado"
+            exit 1
+          fi
+
   lint:
     name: lint
     runs-on: ubuntu-latest
