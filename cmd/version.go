@@ -6,18 +6,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// versionCmd representa o comando 'version'
+var (
+	Version = "dev"
+	Commit  = "none"
+	Date    = "unknown"
+)
+
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Exibe a versão atual do CLI",
-	Long:  `Exibe a versão atual do executável do CLI assinatura.`,
+	Long:  `Exibe a versão, commit e data de build do CLI assinatura. Os valores são injetados via -ldflags no build do CI.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// Em um cenário real, essa versão pode ser injetada via LDFLAGS durante o build do CI/CD
-		fmt.Println("assinatura CLI versão v0.1.0-dev")
+		fmt.Printf("assinatura %s (commit %s, build %s)\n", Version, Commit, Date)
 	},
 }
 
 func init() {
-	// Adiciona o comando 'version' como um subcomando do 'rootCmd'
 	rootCmd.AddCommand(versionCmd)
 }
