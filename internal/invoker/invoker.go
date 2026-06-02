@@ -1,56 +1,75 @@
 package invoker
 
 import (
-	"encoding/json"
+	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 )
 
-type Response struct {
-	Signature string `json:"signature"`
-	Valid      bool   `json:"valid"`
-	Message    string `json:"message"`
+// Result captura a saída de uma invocação ao assinador.jar.
+// Stdout transporta o resultado (JSON), Stderr o diagnóstico, ExitCode o
+// status devolvido pelo JAR. A separação atende ao critério E1 da
+// especificação (docs/criterios.md@4d7d40f).
+type Result struct {
+	Stdout   []byte
+	Stderr   []byte
+	ExitCode int
 }
 
-func Invoke(args ...string) (*Response, error) {
+// execCommand é uma indireção que permite substituir o launcher do java em
+// testes (ver invoker_test.go). Em produção, equivale a exec.Command.
+var execCommand = exec.Command
+
+// Invoke executa o assinador.jar com os argumentos informados.
+//
+// Retorna um *Result preenchido sempre que o java foi de fato executado
+// (mesmo com exit code != 0). Devolve erro apenas quando algo impede a
+// execução: jar ausente, java fora do PATH, falha de I/O do processo.
+func Invoke(args ...string) (*Result, error) {
 	jar, err := jarPath()
 	if err != nil {
 		return nil, err
 	}
+	if _, err := os.Stat(jar); err != nil {
+		return nil, fmt.Errorf("assinador.jar nao encontrado em %q: %w", jar, err)
+	}
 
 	cmdArgs := append([]string{"-jar", jar}, args...)
-	out, execErr := exec.Command("java", cmdArgs...).Output()
+	var stdout, stderr bytes.Buffer
+	cmd := execCommand("java", cmdArgs...)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 
-	if execErr != nil {
-		if exitErr, ok := execErr.(*exec.ExitError); ok {
-			var resp Response
-			if len(out) > 0 && json.Unmarshal(out, &resp) == nil {
-				return &resp, nil
-			}
-			if json.Unmarshal(exitErr.Stderr, &resp) == nil {
-				return &resp, nil
-			}
-			return nil, fmt.Errorf("assinador.jar falhou: %s", string(exitErr.Stderr))
-		}
-		return nil, fmt.Errorf("erro ao executar java: %w", execErr)
+	runErr := cmd.Run()
+
+	result := &Result{
+		Stdout:   stdout.Bytes(),
+		Stderr:   stderr.Bytes(),
+		ExitCode: cmd.ProcessState.ExitCode(),
 	}
 
-	var resp Response
-	if err := json.Unmarshal(out, &resp); err != nil {
-		return nil, fmt.Errorf("resposta inválida do assinador.jar: %w", err)
+	var exitErr *exec.ExitError
+	if runErr != nil && !errors.As(runErr, &exitErr) {
+		return result, fmt.Errorf("falha ao invocar java: %w", runErr)
 	}
-	return &resp, nil
+	return result, nil
 }
 
+// jarPath resolve o caminho do assinador.jar.
+//
+// Ordem de busca:
+//  1. variável de ambiente ASSINADOR_JAR (override explícito);
+//  2. diretório do próprio executável (atende E1: independente do CWD).
 func jarPath() (string, error) {
 	if p := os.Getenv("ASSINADOR_JAR"); p != "" {
 		return p, nil
 	}
 	exe, err := os.Executable()
 	if err != nil {
-		return "", fmt.Errorf("não foi possível localizar assinador.jar: %w", err)
+		return "", fmt.Errorf("nao foi possivel localizar o diretorio do executavel: %w", err)
 	}
 	return filepath.Join(filepath.Dir(exe), "assinador.jar"), nil
 }

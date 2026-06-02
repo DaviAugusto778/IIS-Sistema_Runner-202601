@@ -1,42 +1,38 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
-
-	"github.com/DaviAugusto778/IIS-Sistema_Runner-202601/internal/invoker"
 	"github.com/spf13/cobra"
 )
 
 var validateCmd = &cobra.Command{
 	Use:   "validate",
 	Short: "Valida uma assinatura digital simulada",
-	Long:  `Invoca o assinador.jar para verificar se uma assinatura digital é válida para o conteúdo fornecido.`,
+	Long: `Invoca o assinador.jar para verificar se uma assinatura digital
+corresponde ao conteúdo fornecido.
+
+A validação dos parâmetros é responsabilidade exclusiva do assinador.jar
+(autoridade única, conforme criterio E3). Esta CLI apenas repassa os
+argumentos, o stdout, o stderr e o exit code do JAR.
+
+Exemplos:
+  assinatura validate --content "ola mundo" --signature "MOCKED_SIGNATURE_BASE64_=="`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		content, _ := cmd.Flags().GetString("content")
-		signature, _ := cmd.Flags().GetString("signature")
-
-		resp, err := invoker.Invoke("validate", "--content", content, "--signature", signature)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "Erro:", err)
-			os.Exit(1)
+		invokeArgs := []string{"validate"}
+		if cmd.Flags().Changed("content") {
+			content, _ := cmd.Flags().GetString("content")
+			invokeArgs = append(invokeArgs, "--content", content)
+		}
+		if cmd.Flags().Changed("signature") {
+			signature, _ := cmd.Flags().GetString("signature")
+			invokeArgs = append(invokeArgs, "--signature", signature)
 		}
 
-		if resp.Valid {
-			fmt.Println("Assinatura válida")
-			fmt.Println("Mensagem:", resp.Message)
-		} else {
-			fmt.Fprintln(os.Stderr, "Assinatura inválida:", resp.Message)
-			os.Exit(1)
-		}
-		return nil
+		return runAndPassthrough(invokeArgs...)
 	},
 }
 
 func init() {
-	validateCmd.Flags().String("content", "", "Conteúdo original (obrigatório)")
-	validateCmd.Flags().String("signature", "", "Assinatura a ser validada (obrigatório)")
-	validateCmd.MarkFlagRequired("content")
-	validateCmd.MarkFlagRequired("signature")
+	validateCmd.Flags().String("content", "", "Conteúdo original")
+	validateCmd.Flags().String("signature", "", "Assinatura a ser validada")
 	rootCmd.AddCommand(validateCmd)
 }
