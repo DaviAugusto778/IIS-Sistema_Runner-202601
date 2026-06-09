@@ -84,6 +84,30 @@ jobs:
             exit 1
           fi
 
+      - name: Build CLI simulador
+        shell: bash
+        run: |
+          VERSION="$(git describe --tags --always --dirty)"
+          COMMIT="$(git rev-parse --short HEAD)"
+          DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          LDFLAGS="-s -w \
+            -X main.Version=${VERSION} \
+            -X main.Commit=${COMMIT} \
+            -X main.Date=${DATE}"
+          go build -ldflags "${LDFLAGS}" -o simulador${{ runner.os == 'Windows' && '.exe' || '' }} ./cmd/simulador
+
+      - name: Smoke test simulador version + status
+        shell: bash
+        run: |
+          ./simulador${{ runner.os == 'Windows' && '.exe' || '' }} version
+          # status sem state file deve sair com codigo 1 e mensagem clara
+          out=$(./simulador${{ runner.os == 'Windows' && '.exe' || '' }} status 2>&1 || true)
+          echo "$out"
+          if ! echo "$out" | grep -q "parado"; then
+            echo "ERRO: status sem state deveria reportar 'parado'"
+            exit 1
+          fi
+
   lint:
     name: lint
     runs-on: ubuntu-latest
