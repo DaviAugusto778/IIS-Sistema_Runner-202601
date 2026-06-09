@@ -65,7 +65,7 @@ func runStart(out io.Writer, source string, timeout time.Duration) error {
 		return fmt.Errorf("simulador: 'java' nao encontrado no PATH (US-04.1 cobrira auto-provisao): %w", err)
 	}
 
-	fmt.Fprintln(out, "Garantindo simulador.jar local...")
+	_, _ = fmt.Fprintln(out, "Garantindo simulador.jar local...")
 	ctx, cancel := context.WithTimeout(context.Background(), downloadTimeout)
 	defer cancel()
 	jar, err := release.EnsureSimulador(ctx, nil, source)
@@ -83,7 +83,7 @@ func runStart(out io.Writer, source string, timeout time.Duration) error {
 	}
 	defer func() { _ = logFile.Close() }()
 
-	fmt.Fprintf(out, "Iniciando: %s -jar %s (porta %d)\n", java, jar, simuladorPort)
+	_, _ = fmt.Fprintf(out, "Iniciando: %s -jar %s (porta %d)\n", java, jar, simuladorPort)
 	cmd := exec.Command(java, "-jar", jar, fmt.Sprintf("--server.port=%d", simuladorPort))
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
@@ -94,14 +94,14 @@ func runStart(out io.Writer, source string, timeout time.Duration) error {
 	}
 	pid := cmd.Process.Pid
 	if err := cmd.Process.Release(); err != nil {
-		fmt.Fprintf(out, "Aviso: cmd.Process.Release: %v\n", err)
+		_, _ = fmt.Fprintf(out, "Aviso: cmd.Process.Release: %v\n", err)
 	}
 
 	if err := runtime.Save(stateName, runtime.State{PID: pid, Port: simuladorPort}); err != nil {
 		_ = killPID(pid)
 		return fmt.Errorf("simulador: salvar state: %w", err)
 	}
-	fmt.Fprintf(out, "PID %d gravado; aguardando GET %s ficar pronto (timeout %s)...\n", pid, infoPath, timeout)
+	_, _ = fmt.Fprintf(out, "PID %d gravado; aguardando GET %s ficar pronto (timeout %s)...\n", pid, infoPath, timeout)
 
 	alive := func() bool { return runtime.IsAlive(pid) }
 	if err := waitReady(simuladorPort, alive, timeout, readinessPoll); err != nil {
@@ -110,7 +110,7 @@ func runStart(out io.Writer, source string, timeout time.Duration) error {
 		return fmt.Errorf("simulador: %w (logs: %s)", err, logPath)
 	}
 
-	fmt.Fprintf(out, "Simulador pronto em http://localhost:%d (PID %d, logs em %s).\n",
+	_, _ = fmt.Fprintf(out, "Simulador pronto em http://localhost:%d (PID %d, logs em %s).\n",
 		simuladorPort, pid, logPath)
 	return nil
 }
@@ -124,7 +124,7 @@ func assertNotRunning(out io.Writer) error {
 		return err
 	}
 	if !runtime.IsAlive(st.PID) {
-		fmt.Fprintf(out, "State orfao detectado (PID %d morto); removendo.\n", st.PID)
+		_, _ = fmt.Fprintf(out, "State orfao detectado (PID %d morto); removendo.\n", st.PID)
 		return runtime.Delete(stateName)
 	}
 	return fmt.Errorf("simulador ja em execucao: PID=%d porta=%d (use `simulador stop` antes)",

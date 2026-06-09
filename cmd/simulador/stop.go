@@ -40,7 +40,7 @@ func init() {
 func runStop(out io.Writer, timeout time.Duration) error {
 	st, err := runtime.Load(stateName)
 	if errors.Is(err, os.ErrNotExist) {
-		fmt.Fprintln(out, "Simulador ja estava parado (nenhum state file).")
+		_, _ = fmt.Fprintln(out, "Simulador ja estava parado (nenhum state file).")
 		return nil
 	}
 	if err != nil {
@@ -48,7 +48,7 @@ func runStop(out io.Writer, timeout time.Duration) error {
 	}
 
 	if !runtime.IsAlive(st.PID) {
-		fmt.Fprintf(out, "Simulador ja estava parado (PID %d nao esta vivo); removendo state orfao.\n", st.PID)
+		_, _ = fmt.Fprintf(out, "Simulador ja estava parado (PID %d nao esta vivo); removendo state orfao.\n", st.PID)
 		return runtime.Delete(stateName)
 	}
 
@@ -64,7 +64,7 @@ func runStop(out io.Writer, timeout time.Duration) error {
 	if err := runtime.Delete(stateName); err != nil {
 		return err
 	}
-	fmt.Fprintf(out, "Simulador encerrado (PID %d, porta %d).\n", st.PID, st.Port)
+	_, _ = fmt.Fprintf(out, "Simulador encerrado (PID %d, porta %d).\n", st.PID, st.Port)
 	return nil
 }
 
