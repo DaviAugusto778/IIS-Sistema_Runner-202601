@@ -96,7 +96,7 @@ jobs:
             -X main.Date=${DATE}"
           go build -ldflags "${LDFLAGS}" -o simulador${{ runner.os == 'Windows' && '.exe' || '' }} ./cmd/simulador
 
-      - name: Smoke test simulador version + status
+      - name: Smoke test simulador version + status + stop
         shell: bash
         run: |
           ./simulador${{ runner.os == 'Windows' && '.exe' || '' }} version
@@ -105,6 +105,13 @@ jobs:
           echo "$out"
           if ! echo "$out" | grep -q "parado"; then
             echo "ERRO: status sem state deveria reportar 'parado'"
+            exit 1
+          fi
+          # stop sem state file e idempotente: exit 0 e mensagem clara
+          out=$(./simulador${{ runner.os == 'Windows' && '.exe' || '' }} stop 2>&1)
+          echo "$out"
+          if ! echo "$out" | grep -q "ja estava parado"; then
+            echo "ERRO: stop sem state deveria reportar 'ja estava parado'"
             exit 1
           fi
 

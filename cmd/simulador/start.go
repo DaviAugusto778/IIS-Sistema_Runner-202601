@@ -1,8 +1,12 @@
 package main
 
 import (
+	"errors"
+
 	"github.com/spf13/cobra"
 )
+
+var errNotImplemented = errors.New("comando ainda nao implementado nesta iteracao")
 
 var startCmd = &cobra.Command{
 	Use:   "start",
