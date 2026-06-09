@@ -28,13 +28,31 @@ class FakeSignatureServiceTest {
     void shouldReturnErrorForInvalidSignRequest() {
         SignRequest request = new SignRequest();
         request.setContent(null); // Invalid
-        
+
         SignatureResponse response = service.sign(request);
-        
+
         assertNotNull(response);
         assertFalse(response.isValid());
         assertNull(response.getSignature());
-        assertEquals("Parâmetro 'content' inválido ou ausente", response.getMessage());
+        assertTrue(response.getMessage().startsWith("content: "),
+            "mensagem deve iniciar com 'content: ', obtido: " + response.getMessage());
+        assertTrue(response.getMessage().contains("ausente"));
+    }
+
+    @Test
+    void shouldConcatenateAllValidationErrorsInMessage() {
+        SignRequest request = new SignRequest();
+        request.setContent(null);
+        request.setToken("   ");
+
+        SignatureResponse response = service.sign(request);
+
+        assertFalse(response.isValid());
+        assertNull(response.getSignature());
+        assertTrue(response.getMessage().contains("content: "));
+        assertTrue(response.getMessage().contains("token: "));
+        assertTrue(response.getMessage().contains("; "),
+            "violacoes devem ser separadas por '; ', obtido: " + response.getMessage());
     }
 
     @Test
