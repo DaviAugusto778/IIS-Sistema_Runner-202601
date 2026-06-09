@@ -96,7 +96,7 @@ jobs:
             -X main.Date=${DATE}"
           go build -ldflags "${LDFLAGS}" -o simulador${{ runner.os == 'Windows' && '.exe' || '' }} ./cmd/simulador
 
-      - name: Smoke test simulador version + status + stop
+      - name: Smoke test simulador version + status + stop + start --help
         shell: bash
         run: |
           ./simulador${{ runner.os == 'Windows' && '.exe' || '' }} version
@@ -112,6 +112,13 @@ jobs:
           echo "$out"
           if ! echo "$out" | grep -q "ja estava parado"; then
             echo "ERRO: stop sem state deveria reportar 'ja estava parado'"
+            exit 1
+          fi
+          # start --help: confirma parsing das flags (--source) sem requerer rede/JVM
+          out=$(./simulador${{ runner.os == 'Windows' && '.exe' || '' }} start --help 2>&1)
+          echo "$out"
+          if ! echo "$out" | grep -q "release.json"; then
+            echo "ERRO: start --help deveria documentar --source"
             exit 1
           fi
 
