@@ -79,7 +79,7 @@ jobs:
           cp assinador/target/assinador.jar .
           out=$(./assinatura${{ runner.os == 'Windows' && '.exe' || '' }} sign 2>&1 || true)
           echo "$out"
-          if ! echo "$out" | grep -q "Parâmetro"; then
+          if ! echo "$out" | grep -qi "parâmetro"; then
             echo "ERRO: saida sem acentos UTF-8 — encoding quebrado"
             exit 1
           fi
