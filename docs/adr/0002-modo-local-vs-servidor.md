@@ -17,8 +17,18 @@ padrão.
 
 ## Decisão
 
-Implementar ambos os modos e **usar o servidor HTTP por padrão**, com fallback automático
-para invocação local quando nenhuma instância estiver em execução.
+Implementar ambos os modos e **usar o servidor HTTP por padrão**: o CLI reutiliza uma
+instância ativa ou **inicia uma automaticamente** quando ausente, e então faz a requisição
+via HTTP. O modo local (`java -jar`) é forçado explicitamente com `--local`, e também serve
+de **fallback** quando o servidor não pode subir ou a chamada HTTP falha (com aviso em
+stderr) — a operação sempre produz um resultado.
+
+> **Nota (2026-06-23, US-01.6):** a redação original desta seção era ambígua — citava
+> "fallback automático para local quando nenhuma instância estiver em execução", o que
+> conflitava com o fluxograma abaixo ("não → inicia servidor → POST"). A ambiguidade foi
+> resolvida em favor do **auto-start** (o fluxograma): ausência de servidor dispara o
+> startup automático, não o modo local. O modo local permanece como override (`--local`) e
+> como degradação em caso de falha do servidor.
 
 **Modo local (invocação direta):**
 O CLI executa `java -jar assinador.jar <args>` via `os/exec`, aguarda o término e captura
