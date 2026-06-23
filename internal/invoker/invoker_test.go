@@ -42,6 +42,12 @@ func withFakeExec(t *testing.T) {
 	original := execCommand
 	execCommand = fakeExecCommand
 	t.Cleanup(func() { execCommand = original })
+
+	// Evita detecção/provisionamento real do JDK nos testes do invoker:
+	// fixa o launcher em "java", preservando as asserções de linha de comando.
+	originalResolve := resolveJavaPath
+	resolveJavaPath = func() (string, error) { return "java", nil }
+	t.Cleanup(func() { resolveJavaPath = originalResolve })
 }
 
 func withFakeJar(t *testing.T) string {
