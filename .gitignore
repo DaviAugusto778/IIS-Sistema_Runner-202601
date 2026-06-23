@@ -59,6 +59,12 @@ assinador/.mvn/wrapper/maven-wrapper.jar
 .settings/
 bin/
 
+# ── Ferramentas de desenvolvimento ────────────────────────────────────────────
+
+# Claude Code: configuração pessoal por máquina (um settings.json
+# compartilhado, se vier a existir, permanece versionado)
+.claude/settings.local.json
+
 # ── Sistema Operacional ───────────────────────────────────────────────────────
 
 # macOS
