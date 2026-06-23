@@ -105,6 +105,63 @@ func TestIsHealthyFalseQuandoSemServidor(t *testing.T) {
 	}
 }
 
+func TestPostShutdownSuccess(t *testing.T) {
+	var gotMethod, gotPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod = r.Method
+		gotPath = r.URL.Path
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+	if err := PostShutdown(srv.URL+"/shutdown", time.Second); err != nil {
+		t.Fatalf("PostShutdown: %v", err)
+	}
+	if gotMethod != http.MethodPost {
+		t.Errorf("metodo = %q, quer POST", gotMethod)
+	}
+	if gotPath != "/shutdown" {
+		t.Errorf("path = %q, quer /shutdown", gotPath)
+	}
+}
+
+func TestPostShutdownNon2xx(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "boom", http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+	if err := PostShutdown(srv.URL, time.Second); err == nil {
+		t.Errorf("queria erro para HTTP 500, got nil")
+	}
+}
+
+func TestPostShutdownConnRefused(t *testing.T) {
+	// httptest.NewServer + Close devolve uma URL com porta ja liberada,
+	// reproduzindo "connection refused" sem hardcodar porta.
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
+	url := srv.URL
+	srv.Close()
+	if err := PostShutdown(url, time.Second); err == nil {
+		t.Errorf("queria erro de conexao recusada, got nil")
+	}
+}
+
+func TestWaitForReturnsWhenTrue(t *testing.T) {
+	var ready atomic.Bool
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		ready.Store(true)
+	}()
+	if err := WaitFor(ready.Load, time.Second, 5*time.Millisecond); err != nil {
+		t.Errorf("WaitFor: %v", err)
+	}
+}
+
+func TestWaitForTimeout(t *testing.T) {
+	if err := WaitFor(func() bool { return false }, 50*time.Millisecond, 10*time.Millisecond); err == nil {
+		t.Errorf("queria timeout, got nil")
+	}
+}
+
 func freePort(t *testing.T) int {
 	t.Helper()
 	l, err := net.Listen("tcp", "127.0.0.1:0")

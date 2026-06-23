@@ -17,6 +17,39 @@ import (
 	"time"
 )
 
+// PostShutdown solicita o encerramento gracioso de um servidor via POST url,
+// respeitando timeout. Erro se a conexão falhar ou o status não for 2xx.
+func PostShutdown(url string, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
+	if err != nil {
+		return fmt.Errorf("criar request: %w", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("POST: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("status HTTP %d", resp.StatusCode)
+	}
+	return nil
+}
+
+// WaitFor bloqueia até check() retornar true, ou até timeout expirar,
+// consultando a cada poll. Usado para aguardar um processo encerrar.
+func WaitFor(check func() bool, timeout, poll time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if check() {
+			return nil
+		}
+		time.Sleep(poll)
+	}
+	return fmt.Errorf("timeout apos %s", timeout)
+}
+
 // readinessHTTPTimeout limita cada tentativa de health check para não travar
 // o laço de readiness quando o servidor aceita a conexão mas não responde.
 const readinessHTTPTimeout = 2 * time.Second
