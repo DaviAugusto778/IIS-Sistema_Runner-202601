@@ -121,6 +121,14 @@ class HttpSignatureServerTest {
     }
 
     @Test
+    void healthRetorna200() throws Exception {
+        HttpResponse<String> resp = get("/health");
+
+        assertEquals(200, resp.statusCode());
+        assertTrue(resp.body().contains("\"valid\":true"), resp.body());
+    }
+
+    @Test
     void shutdownRetorna200EEncerraServidor() throws Exception {
         HttpResponse<String> resp = post("/shutdown", "");
 
