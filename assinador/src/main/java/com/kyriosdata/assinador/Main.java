@@ -25,7 +25,7 @@ public class Main {
     public static void main(String[] args) {
         if (args.length == 0) {
             printError("Uso: assinador.jar sign|validate --content <conteudo> [--signature <assinatura>] [--token <token>]"
-                + " | server [--port <porta>]");
+                + " | server [--port <porta>] [--timeout <minutos>]");
             System.exit(1);
         }
 
@@ -83,6 +83,7 @@ public class Main {
      */
     private static void runServer(String[] args) {
         int port = DEFAULT_SERVER_PORT;
+        int timeoutMin = 0;
         for (int i = 1; i < args.length; i++) {
             if ("--port".equals(args[i]) && i + 1 < args.length) {
                 try {
@@ -91,14 +92,24 @@ public class Main {
                     printError("Porta invalida: " + args[i]);
                     System.exit(1);
                 }
+            } else if ("--timeout".equals(args[i]) && i + 1 < args.length) {
+                try {
+                    timeoutMin = Integer.parseInt(args[++i]);
+                } catch (NumberFormatException e) {
+                    printError("Timeout invalido: " + args[i]);
+                    System.exit(1);
+                }
             }
         }
 
+        long idleMillis = timeoutMin > 0 ? (long) timeoutMin * 60_000L : 0L;
         try {
-            HttpSignatureServer server = new HttpSignatureServer(port);
+            HttpSignatureServer server = new HttpSignatureServer(port, idleMillis);
             server.start();
-            System.out.println(Json.toJson(new SignatureResponse(
-                null, true, "Servidor ouvindo na porta " + server.port())));
+            String msg = idleMillis > 0
+                ? "Servidor ouvindo na porta " + server.port() + " (timeout de inatividade: " + timeoutMin + " min)"
+                : "Servidor ouvindo na porta " + server.port();
+            System.out.println(Json.toJson(new SignatureResponse(null, true, msg)));
             server.awaitTermination();
         } catch (IOException e) {
             printError("Falha ao iniciar servidor: " + e.getMessage());

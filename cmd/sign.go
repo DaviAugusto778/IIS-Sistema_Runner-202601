@@ -81,7 +81,10 @@ func runOperation(cmd *cobra.Command, op string, payload map[string]string) erro
 // Reutiliza instância ativa ou sobe uma nova (via runStart); mensagens de
 // progresso vão para progress.
 func ensureServer(progress io.Writer) (int, error) {
-	if err := runStart(progress, defaultServerPort, readinessTimeout); err != nil {
+	// Auto-start sem timeout de inatividade: a duração do servidor levantado
+	// implicitamente é responsabilidade do usuário (ele pode usar `start
+	// --timeout` para um servidor autoexpirável).
+	if err := runStart(progress, defaultServerPort, readinessTimeout, 0); err != nil {
 		return 0, err
 	}
 	st, err := runtime.Load(stateName)

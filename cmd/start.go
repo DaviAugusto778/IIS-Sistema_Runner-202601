@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/DaviAugusto778/IIS-Sistema_Runner-202601/internal/invoker"
@@ -30,7 +31,10 @@ const (
 	jdkTimeout        = 15 * time.Minute
 )
 
-var startPort int
+var (
+	startPort    int
+	startTimeout int
+)
 
 var startCmd = &cobra.Command{
 	Use:   "start",
@@ -44,19 +48,24 @@ a porta está livre, lança 'java -jar assinador.jar server' desacoplado do
 console, persiste PID/porta em ~/.hubsaude/assinador.json e aguarda
 GET /health responder antes de declarar o servidor pronto.
 
+Com --timeout <minutos>, o servidor se encerra automaticamente após esse
+período sem requisições de assinatura/validação (0 = sem timeout).
+
 Saídas do JVM são redirecionadas para ~/.hubsaude/assinador.log.`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		return runStart(cmd.OutOrStdout(), startPort, readinessTimeout)
+		return runStart(cmd.OutOrStdout(), startPort, readinessTimeout, startTimeout)
 	},
 }
 
 func init() {
 	startCmd.Flags().IntVar(&startPort, "port", defaultServerPort,
 		"porta do servidor")
+	startCmd.Flags().IntVar(&startTimeout, "timeout", 0,
+		"minutos de inatividade até o servidor se encerrar sozinho (0 = desabilitado)")
 	rootCmd.AddCommand(startCmd)
 }
 
-func runStart(out io.Writer, port int, timeout time.Duration) error {
+func runStart(out io.Writer, port int, timeout time.Duration, idleTimeoutMin int) error {
 	status, st, err := detectInstance(out)
 	if err != nil {
 		return err
@@ -101,8 +110,12 @@ func runStart(out io.Writer, port int, timeout time.Duration) error {
 	}
 	defer func() { _ = logFile.Close() }()
 
-	_, _ = fmt.Fprintf(out, "Iniciando: %s -jar %s server --port %d\n", java, jar, port)
-	cmd := exec.Command(java, "-jar", jar, "server", "--port", strconv.Itoa(port))
+	jarArgs := []string{"-jar", jar, "server", "--port", strconv.Itoa(port)}
+	if idleTimeoutMin > 0 {
+		jarArgs = append(jarArgs, "--timeout", strconv.Itoa(idleTimeoutMin))
+	}
+	_, _ = fmt.Fprintf(out, "Iniciando: %s %s\n", java, strings.Join(jarArgs, " "))
+	cmd := exec.Command(java, jarArgs...)
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
 	server.Detach(cmd)

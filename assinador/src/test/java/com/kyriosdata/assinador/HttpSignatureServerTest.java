@@ -121,6 +121,54 @@ class HttpSignatureServerTest {
     }
 
     @Test
+    void watchdogEncerraServidorAposInatividade() throws Exception {
+        HttpSignatureServer s = new HttpSignatureServer(0, 200L); // 200ms ocioso
+        s.start();
+        int p = s.port();
+
+        // sem requisições: o watchdog deve encerrar o servidor sozinho
+        boolean down = false;
+        for (int i = 0; i < 40 && !down; i++) {
+            try {
+                HttpClient.newHttpClient().send(
+                    HttpRequest.newBuilder(URI.create("http://localhost:" + p + "/health"))
+                        .timeout(Duration.ofSeconds(1)).GET().build(),
+                    HttpResponse.BodyHandlers.ofString());
+                Thread.sleep(50);
+            } catch (Exception e) {
+                down = true;
+            }
+        }
+        assertTrue(down, "watchdog deveria ter encerrado o servidor por inatividade");
+    }
+
+    @Test
+    void requisicoesResetamOWatchdog() throws Exception {
+        HttpSignatureServer s = new HttpSignatureServer(0, 500L); // 500ms ocioso
+        s.start();
+        int p = s.port();
+        HttpClient c = HttpClient.newHttpClient();
+
+        try {
+            // Requisições a cada 150ms por ~750ms: cada uma reseta o relógio,
+            // então o servidor permanece vivo bem além dos 500ms de inatividade.
+            for (int i = 0; i < 5; i++) {
+                HttpResponse<String> r = c.send(
+                    HttpRequest.newBuilder(URI.create("http://localhost:" + p + "/sign"))
+                        .timeout(Duration.ofSeconds(2))
+                        .POST(HttpRequest.BodyPublishers.ofString("{\"content\":\"x\"}"))
+                        .build(),
+                    HttpResponse.BodyHandlers.ofString());
+                assertEquals(200, r.statusCode(),
+                    "requisicao " + i + " deveria suceder (watchdog resetado)");
+                Thread.sleep(150);
+            }
+        } finally {
+            s.stop();
+        }
+    }
+
+    @Test
     void healthRetorna200() throws Exception {
         HttpResponse<String> resp = get("/health");
 
