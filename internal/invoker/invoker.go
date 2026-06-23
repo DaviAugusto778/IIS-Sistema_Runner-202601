@@ -5,11 +5,15 @@ package invoker
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
+
+	"github.com/DaviAugusto778/IIS-Sistema_Runner-202601/internal/jdk"
 )
 
 // Result captura a saída de uma invocação ao assinador.jar.
@@ -26,6 +30,16 @@ type Result struct {
 // testes (ver invoker_test.go). Em produção, equivale a exec.Command.
 var execCommand = exec.Command
 
+// resolveJavaPath localiza (e, se necessário, provisiona) o launcher do
+// JDK 21 a ser usado. Indireção para testes; em produção delega a
+// jdk.Ensure, que detecta um JDK existente ou baixa a distribuição
+// adequada para ~/.hubsaude/jdk/ (US-04.1).
+var resolveJavaPath = func() (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+	defer cancel()
+	return jdk.Ensure(ctx, nil)
+}
+
 // Invoke executa o assinador.jar com os argumentos informados.
 //
 // Retorna um *Result preenchido sempre que o java foi de fato executado
@@ -40,9 +54,14 @@ func Invoke(args ...string) (*Result, error) {
 		return nil, fmt.Errorf("assinador.jar nao encontrado em %q: %w", jar, err)
 	}
 
+	javaBin, err := resolveJavaPath()
+	if err != nil {
+		return nil, fmt.Errorf("nao foi possivel localizar ou provisionar o JDK 21: %w", err)
+	}
+
 	cmdArgs := append([]string{"-jar", jar}, args...)
 	var stdout, stderr bytes.Buffer
-	cmd := execCommand("java", cmdArgs...)
+	cmd := execCommand(javaBin, cmdArgs...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
