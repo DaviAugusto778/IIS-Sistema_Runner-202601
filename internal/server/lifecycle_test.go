@@ -79,6 +79,32 @@ func TestWaitReadyProcessDies(t *testing.T) {
 	}
 }
 
+func TestIsHealthyTrueOn2xx(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/health" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		http.Error(w, "no", http.StatusNotFound)
+	}))
+	defer srv.Close()
+	port := serverPort(t, srv)
+
+	if !IsHealthy(port, "/health") {
+		t.Error("queria IsHealthy=true para servidor respondendo 200")
+	}
+	if IsHealthy(port, "/inexistente") {
+		t.Error("queria IsHealthy=false para path 404")
+	}
+}
+
+func TestIsHealthyFalseQuandoSemServidor(t *testing.T) {
+	port := freePort(t) // ninguem escutando
+	if IsHealthy(port, "/health") {
+		t.Error("queria IsHealthy=false quando nada escuta na porta")
+	}
+}
+
 func freePort(t *testing.T) int {
 	t.Helper()
 	l, err := net.Listen("tcp", "127.0.0.1:0")

@@ -57,9 +57,20 @@ func init() {
 }
 
 func runStart(out io.Writer, port int, timeout time.Duration) error {
-	if err := assertNotRunning(out); err != nil {
+	status, st, err := detectInstance(out)
+	if err != nil {
 		return err
 	}
+	switch status {
+	case statusRunning:
+		_, _ = fmt.Fprintf(out, "Assinador ja em execucao e respondendo: PID=%d porta=%d (reutilizando).\n",
+			st.PID, st.Port)
+		return nil
+	case statusUnresponsive:
+		return fmt.Errorf("assinador registrado (PID %d porta %d) nao responde em %s; use `assinatura stop` antes",
+			st.PID, st.Port, healthPath)
+	}
+
 	if err := server.AssertPortFree(port); err != nil {
 		return fmt.Errorf("assinatura: porta %d nao disponivel: %w", port, err)
 	}
@@ -122,22 +133,41 @@ func runStart(out io.Writer, port int, timeout time.Duration) error {
 	return nil
 }
 
-// assertNotRunning falha se já há uma instância viva registrada; limpa o
-// state quando o PID registrado não está mais vivo (state órfão).
-func assertNotRunning(out io.Writer) error {
+// instanceStatus classifica a situação de uma instância do assinador
+// registrada em ~/.hubsaude/assinador.json (US-01.7).
+type instanceStatus int
+
+const (
+	// statusNotRunning: sem state file, ou state órfão (PID morto) já removido.
+	statusNotRunning instanceStatus = iota
+	// statusRunning: PID vivo e GET /health respondendo — reutilizável.
+	statusRunning
+	// statusUnresponsive: PID vivo mas /health não responde — considerado inativo.
+	statusUnresponsive
+)
+
+// detectInstance inspeciona o estado persistido e classifica a instância,
+// combinando a verificação do processo registrado (~/.hubsaude/) com um
+// health check HTTP (US-01.7). State órfão (PID morto) é removido.
+func detectInstance(out io.Writer) (instanceStatus, *runtime.State, error) {
 	st, err := runtime.Load(stateName)
 	if errors.Is(err, os.ErrNotExist) {
-		return nil
+		return statusNotRunning, nil, nil
 	}
 	if err != nil {
-		return err
+		return statusNotRunning, nil, err
 	}
 	if !runtime.IsAlive(st.PID) {
 		_, _ = fmt.Fprintf(out, "State orfao detectado (PID %d morto); removendo.\n", st.PID)
-		return runtime.Delete(stateName)
+		if delErr := runtime.Delete(stateName); delErr != nil {
+			return statusNotRunning, nil, delErr
+		}
+		return statusNotRunning, nil, nil
 	}
-	return fmt.Errorf("assinador ja em execucao: PID=%d porta=%d (use `assinatura stop` antes)",
-		st.PID, st.Port)
+	if !server.IsHealthy(st.Port, healthPath) {
+		return statusUnresponsive, st, nil
+	}
+	return statusRunning, st, nil
 }
 
 func serverLogPath() (string, error) {
