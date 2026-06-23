@@ -21,13 +21,11 @@ public class FakeSignatureService implements SignatureService {
 
     @Override
     public SignatureResponse validate(ValidateRequest request) {
-        if (request == null || request.getContent() == null || request.getContent().isEmpty()) {
-            return new SignatureResponse(null, false, "Parâmetro 'content' inválido ou ausente");
+        List<String> errors = ValidateRequestValidator.validate(request);
+        if (!errors.isEmpty()) {
+            return new SignatureResponse(null, false, String.join("; ", errors));
         }
-        if (request.getSignature() == null || request.getSignature().isEmpty()) {
-            return new SignatureResponse(null, false, "Parâmetro 'signature' inválido ou ausente");
-        }
-        
+
         boolean isValid = FAKE_SIGNATURE.equals(request.getSignature());
         return new SignatureResponse(request.getSignature(), isValid, isValid ? "Assinatura é válida" : "Assinatura é inválida");
     }
