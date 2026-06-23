@@ -68,6 +68,20 @@ func TestStartPortFlagDefault(t *testing.T) {
 	}
 }
 
+func TestStartTimeoutFlagDefaultZero(t *testing.T) {
+	start := findSubcommand(rootCmd, "start")
+	if start == nil {
+		t.Fatal("start nao registrado")
+	}
+	f := start.Flags().Lookup("timeout")
+	if f == nil {
+		t.Fatal("flag 'timeout' nao existe em start")
+	}
+	if f.DefValue != "0" {
+		t.Errorf("default de --timeout = %q, quer 0", f.DefValue)
+	}
+}
+
 func TestDetectInstanceNoState(t *testing.T) {
 	withFakeHome(t)
 	var out bytes.Buffer

@@ -14,6 +14,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Servidor HTTP do assinador (US-02.4). Expõe {@code POST /sign} e
@@ -38,13 +43,37 @@ public final class HttpSignatureServer {
     private final HttpServer server;
     private final SignatureService service;
     private final CountDownLatch terminated = new CountDownLatch(1);
+    private final AtomicBoolean stopped = new AtomicBoolean(false);
+
+    // Watchdog de inatividade (US-01.9): quando idleMillis > 0, o servidor se
+    // encerra após esse período sem requisições de /sign ou /validate. Probes
+    // de /health não contam como atividade.
+    private final long idleMillis;
+    private final ScheduledExecutorService watchdog;
+    private ScheduledFuture<?> pendingShutdown;
 
     public HttpSignatureServer(int port) throws IOException {
-        this(port, new FakeSignatureService());
+        this(port, new FakeSignatureService(), 0);
+    }
+
+    public HttpSignatureServer(int port, long idleMillis) throws IOException {
+        this(port, new FakeSignatureService(), idleMillis);
     }
 
     public HttpSignatureServer(int port, SignatureService service) throws IOException {
+        this(port, service, 0);
+    }
+
+    public HttpSignatureServer(int port, SignatureService service, long idleMillis) throws IOException {
         this.service = service;
+        this.idleMillis = idleMillis;
+        this.watchdog = idleMillis > 0
+            ? Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "assinador-watchdog");
+                t.setDaemon(true);
+                return t;
+            })
+            : null;
         this.server = HttpServer.create(new InetSocketAddress(port), 0);
         this.server.createContext("/health", this::handleHealth);
         this.server.createContext("/sign", this::handleSign);
@@ -53,9 +82,23 @@ public final class HttpSignatureServer {
         this.server.setExecutor(null); // executor padrão (síncrono)
     }
 
-    /** Inicia o servidor em background. */
+    /** Inicia o servidor em background e arma o watchdog de inatividade. */
     public void start() {
         server.start();
+        rearmWatchdog();
+    }
+
+    /** (Re)agenda o auto-shutdown por inatividade. Chamado no start e a cada
+     *  requisição de assinatura/validação. No-op quando o watchdog está
+     *  desabilitado (idleMillis == 0). */
+    private synchronized void rearmWatchdog() {
+        if (watchdog == null) {
+            return;
+        }
+        if (pendingShutdown != null) {
+            pendingShutdown.cancel(false);
+        }
+        pendingShutdown = watchdog.schedule(this::stop, idleMillis, TimeUnit.MILLISECONDS);
     }
 
     /** Porta efetivamente vinculada (resolve porta efêmera quando 0). */
@@ -63,8 +106,15 @@ public final class HttpSignatureServer {
         return server.getAddress().getPort();
     }
 
-    /** Encerra o servidor e libera quem aguarda {@link #awaitTermination()}. */
+    /** Encerra o servidor (idempotente) e libera quem aguarda
+     *  {@link #awaitTermination()}. */
     public void stop() {
+        if (!stopped.compareAndSet(false, true)) {
+            return;
+        }
+        if (watchdog != null) {
+            watchdog.shutdownNow();
+        }
         server.stop(0);
         terminated.countDown();
     }
@@ -85,6 +135,7 @@ public final class HttpSignatureServer {
         if (!ensurePost(exchange)) {
             return;
         }
+        rearmWatchdog();
         Map<String, String> json = parseBodyOrFail(exchange);
         if (json == null) {
             return;
@@ -105,6 +156,7 @@ public final class HttpSignatureServer {
         if (!ensurePost(exchange)) {
             return;
         }
+        rearmWatchdog();
         Map<String, String> json = parseBodyOrFail(exchange);
         if (json == null) {
             return;
