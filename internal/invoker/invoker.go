@@ -46,7 +46,7 @@ var resolveJavaPath = func() (string, error) {
 // (mesmo com exit code != 0). Devolve erro apenas quando algo impede a
 // execução: jar ausente, java fora do PATH, falha de I/O do processo.
 func Invoke(args ...string) (*Result, error) {
-	jar, err := jarPath()
+	jar, err := JarPath()
 	if err != nil {
 		return nil, err
 	}
@@ -80,12 +80,12 @@ func Invoke(args ...string) (*Result, error) {
 	return result, nil
 }
 
-// jarPath resolve o caminho do assinador.jar.
+// JarPath resolve o caminho do assinador.jar.
 //
 // Ordem de busca:
 //  1. variável de ambiente ASSINADOR_JAR (override explícito);
 //  2. diretório do próprio executável (atende E1: independente do CWD).
-func jarPath() (string, error) {
+func JarPath() (string, error) {
 	if p := os.Getenv("ASSINADOR_JAR"); p != "" {
 		return p, nil
 	}

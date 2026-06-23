@@ -46,6 +46,7 @@ public final class HttpSignatureServer {
     public HttpSignatureServer(int port, SignatureService service) throws IOException {
         this.service = service;
         this.server = HttpServer.create(new InetSocketAddress(port), 0);
+        this.server.createContext("/health", this::handleHealth);
         this.server.createContext("/sign", this::handleSign);
         this.server.createContext("/validate", this::handleValidate);
         this.server.createContext("/shutdown", this::handleShutdown);
@@ -71,6 +72,13 @@ public final class HttpSignatureServer {
     /** Bloqueia até o servidor ser encerrado via {@code /shutdown} ou {@link #stop()}. */
     public void awaitTermination() throws InterruptedException {
         terminated.await();
+    }
+
+    /** Liveness/readiness: responde 200 a qualquer método, indicando que o
+     *  servidor já está aceitando requisições (alvo do readiness do CLI,
+     *  US-01.5). */
+    private void handleHealth(HttpExchange exchange) throws IOException {
+        writeResponse(exchange, 200, new SignatureResponse(null, true, "ok"));
     }
 
     private void handleSign(HttpExchange exchange) throws IOException {
