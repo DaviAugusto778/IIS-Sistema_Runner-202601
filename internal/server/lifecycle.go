@@ -51,6 +51,15 @@ func WaitReady(port int, alive func() bool, timeout, poll time.Duration, healthP
 	return fmt.Errorf("timeout %s aguardando %s", timeout, url)
 }
 
+// IsHealthy faz um único health check em GET http://localhost:<port><healthPath>
+// e reporta se respondeu 2xx. Usado para confirmar que uma instância
+// registrada está de fato no ar (US-01.7), sem o laço de WaitReady.
+func IsHealthy(port int, healthPath string) bool {
+	client := &http.Client{Timeout: readinessHTTPTimeout}
+	url := fmt.Sprintf("http://localhost:%d%s", port, healthPath)
+	return probeReady(client, url)
+}
+
 func probeReady(client *http.Client, url string) bool {
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 	if err != nil {
