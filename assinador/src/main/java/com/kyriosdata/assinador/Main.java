@@ -4,10 +4,14 @@ import com.kyriosdata.assinador.domain.SignRequest;
 import com.kyriosdata.assinador.domain.SignatureResponse;
 import com.kyriosdata.assinador.domain.ValidateRequest;
 
+import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 
 public class Main {
+
+    /** Porta padrão do modo servidor quando --port não é informado. */
+    static final int DEFAULT_SERVER_PORT = 8080;
 
     static {
         // Garante UTF-8 nos streams independente do encoding do console
@@ -20,11 +24,18 @@ public class Main {
 
     public static void main(String[] args) {
         if (args.length == 0) {
-            printError("Uso: assinador.jar sign|validate --content <conteudo> [--signature <assinatura>] [--token <token>]");
+            printError("Uso: assinador.jar sign|validate --content <conteudo> [--signature <assinatura>] [--token <token>]"
+                + " | server [--port <porta>]");
             System.exit(1);
         }
 
         String command = args[0];
+
+        if ("server".equals(command)) {
+            runServer(args);
+            return;
+        }
+
         String content = null;
         String signature = null;
         String token = null;
@@ -61,21 +72,43 @@ public class Main {
                 return;
         }
 
-        System.out.println(toJson(response));
+        System.out.println(Json.toJson(response));
         System.exit(response.isValid() ? 0 : 1);
     }
 
-    private static String toJson(SignatureResponse r) {
-        String sig = r.getSignature() != null
-            ? "\"" + r.getSignature() + "\""
-            : "null";
-        String msg = r.getMessage() != null
-            ? r.getMessage().replace("\"", "\\\"")
-            : "";
-        return "{\"signature\":" + sig + ",\"valid\":" + r.isValid() + ",\"message\":\"" + msg + "\"}";
+    /**
+     * Inicia o modo servidor HTTP (US-02.4) e bloqueia até o encerramento
+     * via POST /shutdown. Aceita {@code --port <porta>}; usa
+     * {@link #DEFAULT_SERVER_PORT} quando omitido.
+     */
+    private static void runServer(String[] args) {
+        int port = DEFAULT_SERVER_PORT;
+        for (int i = 1; i < args.length; i++) {
+            if ("--port".equals(args[i]) && i + 1 < args.length) {
+                try {
+                    port = Integer.parseInt(args[++i]);
+                } catch (NumberFormatException e) {
+                    printError("Porta invalida: " + args[i]);
+                    System.exit(1);
+                }
+            }
+        }
+
+        try {
+            HttpSignatureServer server = new HttpSignatureServer(port);
+            server.start();
+            System.out.println(Json.toJson(new SignatureResponse(
+                null, true, "Servidor ouvindo na porta " + server.port())));
+            server.awaitTermination();
+        } catch (IOException e) {
+            printError("Falha ao iniciar servidor: " + e.getMessage());
+            System.exit(1);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private static void printError(String message) {
-        System.err.println("{\"signature\":null,\"valid\":false,\"message\":\"" + message + "\"}");
+        System.err.println(Json.toJson(new SignatureResponse(null, false, message)));
     }
 }
