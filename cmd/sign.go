@@ -22,10 +22,16 @@ segunda chamada. Use --local para forçar a invocação direta 'java -jar'.
 A validação dos parâmetros é responsabilidade exclusiva do assinador.jar
 (autoridade única, conforme criterio E3).
 
+Para assinar interagindo com um dispositivo criptográfico (token/smart card)
+via PKCS#11 (US-02.5), use --pkcs11-lib (o PIN vai em --token). A interação
+com o dispositivo é por invocação, então --pkcs11-lib implica modo local; para
+o modo servidor com dispositivo, configure-o em 'assinatura start --pkcs11-lib'.
+
 Exemplos:
   assinatura sign --content "ola mundo"
   assinatura sign --content "$(cat documento.txt)" --token abc123
-  assinatura sign --content "ola" --local`,
+  assinatura sign --content "ola" --local
+  assinatura sign --content "ola" --token 1234 --pkcs11-lib /usr/lib/softhsm/libsofthsm2.so`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		payload := map[string]string{}
 		if cmd.Flags().Changed("content") {
@@ -42,8 +48,10 @@ Exemplos:
 
 func init() {
 	signCmd.Flags().String("content", "", "Conteúdo a ser assinado")
-	signCmd.Flags().String("token", "", "Token de autenticação")
+	signCmd.Flags().String("token", "", "Token de autenticação (PIN do dispositivo PKCS#11, quando aplicável)")
 	signCmd.Flags().Bool("local", false, "Força invocação direta 'java -jar' (sem modo servidor)")
+	signCmd.Flags().String("pkcs11-lib", "", "Caminho da biblioteca PKCS#11 do dispositivo (ativa o modo dispositivo; implica --local)")
+	signCmd.Flags().Int("pkcs11-slot", pkcs11SlotUnset, "Slot do dispositivo PKCS#11 (padrão: primeiro slot)")
 	rootCmd.AddCommand(signCmd)
 }
 
@@ -56,8 +64,19 @@ func init() {
 // operação sempre produz um resultado.
 func runOperation(cmd *cobra.Command, op string, payload map[string]string) error {
 	local, _ := cmd.Flags().GetBool("local")
+	pkcs11 := pkcs11ArgsFromFlags(cmd)
+
+	// O dispositivo PKCS#11 é configurado por invocação (modo local) ou no
+	// servidor (via `start --pkcs11-lib`). Aplicá-lo a um servidor genérico já
+	// no ar produziria uma assinatura sem dispositivo — por isso --pkcs11-lib
+	// força o modo local nesta chamada.
+	if len(pkcs11) > 0 && !local {
+		fmt.Fprintln(os.Stderr, "aviso: --pkcs11-lib configura o dispositivo por invocacao; usando modo local "+
+			"(para modo servidor com dispositivo, use `assinatura start --pkcs11-lib`)")
+		local = true
+	}
 	if local {
-		return runLocal(op, payload)
+		return runLocal(op, payload, pkcs11)
 	}
 
 	// Progresso (provisão de JDK, startup do servidor) vai para stderr para
@@ -65,13 +84,13 @@ func runOperation(cmd *cobra.Command, op string, payload map[string]string) erro
 	port, err := ensureServer(os.Stderr)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "aviso: modo servidor indisponivel (%v); usando modo local\n", err)
-		return runLocal(op, payload)
+		return runLocal(op, payload, pkcs11)
 	}
 
 	result, err := invoker.InvokeHTTP(port, op, payload)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "aviso: falha na chamada HTTP (%v); usando modo local\n", err)
-		return runLocal(op, payload)
+		return runLocal(op, payload, pkcs11)
 	}
 	emitResult(result)
 	return nil
@@ -97,8 +116,8 @@ func ensureServer(progress io.Writer) (int, error) {
 // runLocal invoca o assinador.jar diretamente (java -jar), repassa
 // stdout/stderr e termina com o exit code do JAR. Falhas de execução (jar
 // ausente, java fora do PATH) saem com código 2.
-func runLocal(op string, payload map[string]string) error {
-	result, err := invoker.Invoke(localArgs(op, payload)...)
+func runLocal(op string, payload map[string]string, extra []string) error {
+	result, err := invoker.Invoke(localArgs(op, payload, extra)...)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "erro:", err)
 		os.Exit(2)
@@ -108,15 +127,16 @@ func runLocal(op string, payload map[string]string) error {
 }
 
 // localArgs converte o payload em argumentos de linha de comando para o JAR,
-// em ordem estável. Repassa apenas as chaves fornecidas pelo usuário.
-func localArgs(op string, payload map[string]string) []string {
+// em ordem estável. Repassa apenas as chaves fornecidas pelo usuário, seguidas
+// dos argumentos extras (ex.: --pkcs11-lib/--pkcs11-slot da US-02.5).
+func localArgs(op string, payload map[string]string, extra []string) []string {
 	args := []string{op}
 	for _, k := range []string{"content", "token", "signature"} {
 		if v, ok := payload[k]; ok {
 			args = append(args, "--"+k, v)
 		}
 	}
-	return args
+	return append(args, extra...)
 }
 
 // emitResult repassa o resultado (stdout/stderr) e encerra o processo com o

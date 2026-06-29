@@ -32,8 +32,10 @@ const (
 )
 
 var (
-	startPort    int
-	startTimeout int
+	startPort       int
+	startTimeout    int
+	startPkcs11Lib  string
+	startPkcs11Slot int
 )
 
 var startCmd = &cobra.Command{
@@ -51,9 +53,14 @@ GET /health responder antes de declarar o servidor pronto.
 Com --timeout <minutos>, o servidor se encerra automaticamente após esse
 período sem requisições de assinatura/validação (0 = sem timeout).
 
+Com --pkcs11-lib, o servidor passa a assinar interagindo com um dispositivo
+criptográfico via PKCS#11 (US-02.5); o dispositivo fica vinculado a esta
+instância e o PIN é informado por requisição (--token no 'sign').
+
 Saídas do JVM são redirecionadas para ~/.hubsaude/assinador.log.`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		return runStart(cmd.OutOrStdout(), startPort, readinessTimeout, startTimeout)
+		return runStart(cmd.OutOrStdout(), startPort, readinessTimeout, startTimeout,
+			pkcs11JarArgs(startPkcs11Lib, startPkcs11Slot)...)
 	},
 }
 
@@ -62,10 +69,18 @@ func init() {
 		"porta do servidor")
 	startCmd.Flags().IntVar(&startTimeout, "timeout", 0,
 		"minutos de inatividade até o servidor se encerrar sozinho (0 = desabilitado)")
+	startCmd.Flags().StringVar(&startPkcs11Lib, "pkcs11-lib", "",
+		"caminho da biblioteca PKCS#11; vincula um dispositivo criptográfico ao servidor")
+	startCmd.Flags().IntVar(&startPkcs11Slot, "pkcs11-slot", pkcs11SlotUnset,
+		"slot do dispositivo PKCS#11 (padrão: primeiro slot)")
 	rootCmd.AddCommand(startCmd)
 }
 
-func runStart(out io.Writer, port int, timeout time.Duration, idleTimeoutMin int) error {
+// runStart sobe (ou reutiliza) o assinador.jar em modo servidor. extraJarArgs
+// são repassados ao subcomando `server` do JAR — ex.: --pkcs11-lib/--pkcs11-slot
+// para vincular um dispositivo criptográfico à instância (US-02.5). O auto-start
+// disparado por sign/validate não passa extras (servidor genérico).
+func runStart(out io.Writer, port int, timeout time.Duration, idleTimeoutMin int, extraJarArgs ...string) error {
 	status, st, err := detectInstance(out)
 	if err != nil {
 		return err
@@ -114,6 +129,7 @@ func runStart(out io.Writer, port int, timeout time.Duration, idleTimeoutMin int
 	if idleTimeoutMin > 0 {
 		jarArgs = append(jarArgs, "--timeout", strconv.Itoa(idleTimeoutMin))
 	}
+	jarArgs = append(jarArgs, extraJarArgs...)
 	_, _ = fmt.Fprintf(out, "Iniciando: %s %s\n", java, strings.Join(jarArgs, " "))
 	cmd := exec.Command(java, jarArgs...)
 	cmd.Stdout = logFile

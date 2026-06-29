@@ -3,6 +3,9 @@ package com.kyriosdata.assinador;
 import com.kyriosdata.assinador.domain.SignRequest;
 import com.kyriosdata.assinador.domain.SignatureResponse;
 import com.kyriosdata.assinador.domain.ValidateRequest;
+import com.kyriosdata.assinador.pkcs11.Pkcs11Config;
+import com.kyriosdata.assinador.pkcs11.Pkcs11SignatureService;
+import com.kyriosdata.assinador.pkcs11.SunPkcs11Gateway;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -25,7 +28,8 @@ public class Main {
     public static void main(String[] args) {
         if (args.length == 0) {
             printError("Uso: assinador.jar sign|validate --content <conteudo> [--signature <assinatura>] [--token <token>]"
-                + " | server [--port <porta>] [--timeout <minutos>]");
+                + " [--pkcs11-lib <caminho> [--pkcs11-slot <n>]]"
+                + " | server [--port <porta>] [--timeout <minutos>] [--pkcs11-lib <caminho> [--pkcs11-slot <n>]]");
             System.exit(1);
         }
 
@@ -39,16 +43,20 @@ public class Main {
         String content = null;
         String signature = null;
         String token = null;
+        String pkcs11Lib = null;
+        Integer pkcs11Slot = null;
 
         for (int i = 1; i < args.length - 1; i++) {
             switch (args[i]) {
-                case "--content":   content   = args[++i]; break;
-                case "--signature": signature = args[++i]; break;
-                case "--token":     token     = args[++i]; break;
+                case "--content":     content    = args[++i]; break;
+                case "--signature":   signature  = args[++i]; break;
+                case "--token":       token      = args[++i]; break;
+                case "--pkcs11-lib":  pkcs11Lib  = args[++i]; break;
+                case "--pkcs11-slot": pkcs11Slot = parseSlot(args[++i]); break;
             }
         }
 
-        FakeSignatureService service = new FakeSignatureService();
+        SignatureService service = buildService(pkcs11Lib, pkcs11Slot);
         SignatureResponse response;
 
         switch (command) {
@@ -84,6 +92,8 @@ public class Main {
     private static void runServer(String[] args) {
         int port = DEFAULT_SERVER_PORT;
         int timeoutMin = 0;
+        String pkcs11Lib = null;
+        Integer pkcs11Slot = null;
         for (int i = 1; i < args.length; i++) {
             if ("--port".equals(args[i]) && i + 1 < args.length) {
                 try {
@@ -99,12 +109,16 @@ public class Main {
                     printError("Timeout invalido: " + args[i]);
                     System.exit(1);
                 }
+            } else if ("--pkcs11-lib".equals(args[i]) && i + 1 < args.length) {
+                pkcs11Lib = args[++i];
+            } else if ("--pkcs11-slot".equals(args[i]) && i + 1 < args.length) {
+                pkcs11Slot = parseSlot(args[++i]);
             }
         }
 
         long idleMillis = timeoutMin > 0 ? (long) timeoutMin * 60_000L : 0L;
         try {
-            HttpSignatureServer server = new HttpSignatureServer(port, idleMillis);
+            HttpSignatureServer server = new HttpSignatureServer(port, buildService(pkcs11Lib, pkcs11Slot), idleMillis);
             server.start();
             String msg = idleMillis > 0
                 ? "Servidor ouvindo na porta " + server.port() + " (timeout de inatividade: " + timeoutMin + " min)"
@@ -116,6 +130,34 @@ public class Main {
             System.exit(1);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+        }
+    }
+
+    /**
+     * Seleciona o serviço de assinatura. Sem {@code --pkcs11-lib}, usa o
+     * {@link FakeSignatureService} (fluxo padrão, sem dispositivo). Com a
+     * biblioteca informada, embrulha o serviço simulado em
+     * {@link Pkcs11SignatureService}, que interage com o token via PKCS#11
+     * (US-02.5). O PKCS#11 é, portanto, estritamente opcional e nunca bloqueia
+     * o fluxo padrão.
+     */
+    private static SignatureService buildService(String pkcs11Lib, Integer pkcs11Slot) {
+        FakeSignatureService fake = new FakeSignatureService();
+        if (pkcs11Lib == null) {
+            return fake;
+        }
+        Pkcs11Config config = new Pkcs11Config(Pkcs11Config.DEFAULT_NAME, pkcs11Lib, pkcs11Slot);
+        return new Pkcs11SignatureService(config, new SunPkcs11Gateway(), fake);
+    }
+
+    /** Converte o argumento de {@code --pkcs11-slot} em inteiro; encerra com erro claro se inválido. */
+    private static Integer parseSlot(String raw) {
+        try {
+            return Integer.valueOf(raw);
+        } catch (NumberFormatException e) {
+            printError("Slot PKCS#11 invalido: " + raw + " (informe um inteiro)");
+            System.exit(1);
+            return null; // inalcançável
         }
     }
 
