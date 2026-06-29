@@ -35,15 +35,24 @@ Os documentos oficiais do trabalho estão no repositório do professor, fixados 
 | US-04 | Provisionar JDK automaticamente (detecção e download) | ✅ Concluído |
 | US-05 | Disponibilizar binários multiplataforma via GitHub Releases | ✅ Concluído |
 
+## Documentação
+
+| Documento | Para quê |
+|-----------|----------|
+| [**Guia de Instalação**](docs/instalacao.md) | Baixar, verificar (SHA256 + Cosign) e instalar nas três plataformas |
+| [**Manual de Usuário**](docs/manual-usuario.md) | Comandos, flags, modos local/servidor, PKCS#11, exit codes e troubleshooting |
+| [ADRs](docs/adr/) | Decisões de arquitetura (Go+Java, modo local vs servidor, contrato CLI↔JAR, servidor HTTP, PKCS#11) |
+
 ## Como rodar
 
-> Esta seção será preenchida conforme a implementação avança.
+O guia abaixo é um resumo; consulte o [Manual de Usuário](docs/manual-usuario.md)
+e o [Guia de Instalação](docs/instalacao.md) para os detalhes.
 
 ### Pré-requisitos
 
 - Go 1.25 ou superior (para compilar a CLI)
 - JDK 21 e Maven (para compilar o `assinador.jar`)
-- Em runtime, o usuário final só precisa de Java 21 instalado (ou aguardar US-04, que provisiona JRE automaticamente)
+- Em runtime, o usuário final **não** precisa instalar Java: o CLI detecta um JDK 21 ou provisiona um JRE Temurin automaticamente (US-04)
 
 ### Compilar localmente
 
