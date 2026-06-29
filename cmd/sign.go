@@ -72,7 +72,7 @@ func runOperation(cmd *cobra.Command, op string, payload map[string]string) erro
 	// no ar produziria uma assinatura sem dispositivo — por isso --pkcs11-lib
 	// força o modo local nesta chamada.
 	if len(pkcs11) > 0 && !local {
-		fmt.Fprintln(progressWriter(), "aviso: --pkcs11-lib configura o dispositivo por invocacao; usando modo local "+
+		_, _ = fmt.Fprintln(progressWriter(), "aviso: --pkcs11-lib configura o dispositivo por invocacao; usando modo local "+
 			"(para modo servidor com dispositivo, use `assinatura start --pkcs11-lib`)")
 		local = true
 	}
@@ -86,14 +86,14 @@ func runOperation(cmd *cobra.Command, op string, payload map[string]string) erro
 	// silenciável com --quiet.
 	port, err := ensureServer(progressWriter())
 	if err != nil {
-		fmt.Fprintf(progressWriter(), "aviso: modo servidor indisponivel (%v); usando modo local\n", err)
+		_, _ = fmt.Fprintf(progressWriter(), "aviso: modo servidor indisponivel (%v); usando modo local\n", err)
 		return runLocal(op, payload, pkcs11)
 	}
 	tracef("operacao=%s modo=servidor porta=%d", op, port)
 
 	result, err := invoker.InvokeHTTP(port, op, payload)
 	if err != nil {
-		fmt.Fprintf(progressWriter(), "aviso: falha na chamada HTTP (%v); usando modo local\n", err)
+		_, _ = fmt.Fprintf(progressWriter(), "aviso: falha na chamada HTTP (%v); usando modo local\n", err)
 		return runLocal(op, payload, pkcs11)
 	}
 	emitResult(result)
