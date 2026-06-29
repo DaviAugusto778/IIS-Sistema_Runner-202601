@@ -24,5 +24,9 @@ var versionCmd = &cobra.Command{
 }
 
 func init() {
+	// Habilita também a flag --version (criterio I), com saída idêntica à do
+	// subcomando version: "simulador <versao> (commit <sha>, build <data>)".
+	rootCmd.Version = fmt.Sprintf("%s (commit %s, build %s)", Version, Commit, Date)
+	rootCmd.SetVersionTemplate("{{.Name}} {{.Version}}\n")
 	rootCmd.AddCommand(versionCmd)
 }
