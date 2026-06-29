@@ -2,9 +2,12 @@ package runtime
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
+	"time"
 )
 
 // withFakeHome aponta os.UserHomeDir() para um diretório temporário,
@@ -65,6 +68,71 @@ func TestDeleteIdempotent(t *testing.T) {
 	}
 	if _, err := Load("x"); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("apos Delete, Load devia errar com NotExist, got %v", err)
+	}
+}
+
+// TestSaveConcurrentNeverYieldsTornRead simula o cenário "race no start"
+// (criterio G): vários `start` concorrentes persistindo o estado enquanto
+// outros o leem. Com a escrita atômica (temp + rename), o leitor nunca observa
+// um arquivo truncado — Load sempre devolve um estado íntegro. Há um pequeno
+// espaçamento entre as operações para refletir o uso real (poucos starts
+// gravando esporadicamente), não um hammer sintético. Sob -race (como no CI),
+// valida ainda a ausência de corrida de memória no caminho.
+func TestSaveConcurrentNeverYieldsTornRead(t *testing.T) {
+	withFakeHome(t)
+	const (
+		name    = "concorrente"
+		writers = 4
+		readers = 4
+		iters   = 25
+		spacing = time.Millisecond
+	)
+
+	// Semeia o arquivo para que os leitores não precisem tolerar ErrNotExist
+	// no estado estacionário — qualquer erro de Load passa a ser corrupção.
+	if err := Save(name, State{PID: 1, Port: 8000}); err != nil {
+		t.Fatalf("seed Save: %v", err)
+	}
+
+	var wg sync.WaitGroup
+	errc := make(chan error, (writers+readers)*iters)
+
+	for w := 0; w < writers; w++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for i := 0; i < iters; i++ {
+				if err := Save(name, State{PID: id*1000 + i, Port: 8000 + id}); err != nil {
+					errc <- fmt.Errorf("Save: %w", err)
+					return
+				}
+				time.Sleep(spacing)
+			}
+		}(w)
+	}
+	for r := 0; r < readers; r++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < iters; i++ {
+				st, err := Load(name)
+				if err != nil {
+					errc <- fmt.Errorf("Load corrompido (esperava estado integro): %w", err)
+					return
+				}
+				if st.Port < 8000 || st.Port >= 8000+writers {
+					errc <- fmt.Errorf("estado torn: porta fora da faixa esperada: %d", st.Port)
+					return
+				}
+				time.Sleep(spacing)
+			}
+		}()
+	}
+
+	wg.Wait()
+	close(errc)
+	for err := range errc {
+		t.Error(err)
 	}
 }
 

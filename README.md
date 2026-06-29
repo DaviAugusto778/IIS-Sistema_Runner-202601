@@ -79,9 +79,15 @@ cp assinador/target/assinador.jar .
 # Validar assinatura
 ./assinatura validate --content "texto a assinar" --signature "<assinatura>"
 
-# Iniciar modo servidor HTTP (planejado para Sprint 3 — US-01.5+)
-# ./assinatura start
+# Modo servidor HTTP (padrão a partir da 2ª chamada): iniciar, consultar e parar
+./assinatura start                 # sobe o servidor em background (porta 8080)
+./assinatura status                # mostra se está em execução
+./assinatura stop                  # encerra a instância
 ```
+
+Por padrão, `sign`/`validate` usam o modo servidor (reutilizam ou auto-iniciam
+uma instância). Use `--local` para forçar a invocação direta `java -jar`.
+Detalhes completos no [Manual de Usuário](docs/manual-usuario.md).
 
 ### Assinar com dispositivo criptográfico (PKCS#11 — US-02.5)
 
@@ -123,11 +129,33 @@ variáveis `PKCS11_LIBRARY`/`PKCS11_PIN` (instruções em `Pkcs11IntegrationTest
 ### Executar o CLI `simulador`
 
 ```bash
-# A preencher na Sprint 4
-# simulador start
-# simulador stop
-# simulador status
+# Baixa o simulador.jar (se preciso), provisiona o JDK e inicia na porta 8443
+./simulador start
+
+# Consulta o status (via GET /api/info) e encerra (via POST /shutdown)
+./simulador status
+./simulador stop
 ```
+
+### Executar os testes
+
+```bash
+# Testes Go (CLIs e pacotes internos)
+go vet ./...
+go test ./...
+
+# Testes Java (assinador.jar)
+cd assinador && ./mvnw test
+```
+
+O CI (GitHub Actions) roda lint + build + testes em Windows e Linux a cada push
+e PR; a falha bloqueia o merge.
+
+## Como contribuir
+
+Convenções de branch, commits e fluxo de PR estão em
+[CONTRIBUTING.md](CONTRIBUTING.md). Em resumo: branches `feature/US-XX.Y-descricao`,
+Conventional Commits, e toda história com testes antes do merge.
 
 ### Verificar integridade dos binários baixados
 

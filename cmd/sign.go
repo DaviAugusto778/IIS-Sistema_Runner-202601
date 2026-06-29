@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/DaviAugusto778/IIS-Sistema_Runner-202601/internal/invoker"
 	"github.com/DaviAugusto778/IIS-Sistema_Runner-202601/internal/runtime"
@@ -71,25 +72,28 @@ func runOperation(cmd *cobra.Command, op string, payload map[string]string) erro
 	// no ar produziria uma assinatura sem dispositivo — por isso --pkcs11-lib
 	// força o modo local nesta chamada.
 	if len(pkcs11) > 0 && !local {
-		fmt.Fprintln(os.Stderr, "aviso: --pkcs11-lib configura o dispositivo por invocacao; usando modo local "+
+		_, _ = fmt.Fprintln(progressWriter(), "aviso: --pkcs11-lib configura o dispositivo por invocacao; usando modo local "+
 			"(para modo servidor com dispositivo, use `assinatura start --pkcs11-lib`)")
 		local = true
 	}
 	if local {
+		tracef("operacao=%s modo=local", op)
 		return runLocal(op, payload, pkcs11)
 	}
 
 	// Progresso (provisão de JDK, startup do servidor) vai para stderr para
-	// manter o stdout limpo com apenas o JSON do resultado (ADR-0003).
-	port, err := ensureServer(os.Stderr)
+	// manter o stdout limpo com apenas o JSON do resultado (ADR-0003);
+	// silenciável com --quiet.
+	port, err := ensureServer(progressWriter())
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "aviso: modo servidor indisponivel (%v); usando modo local\n", err)
+		_, _ = fmt.Fprintf(progressWriter(), "aviso: modo servidor indisponivel (%v); usando modo local\n", err)
 		return runLocal(op, payload, pkcs11)
 	}
+	tracef("operacao=%s modo=servidor porta=%d", op, port)
 
 	result, err := invoker.InvokeHTTP(port, op, payload)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "aviso: falha na chamada HTTP (%v); usando modo local\n", err)
+		_, _ = fmt.Fprintf(progressWriter(), "aviso: falha na chamada HTTP (%v); usando modo local\n", err)
 		return runLocal(op, payload, pkcs11)
 	}
 	emitResult(result)
@@ -117,7 +121,9 @@ func ensureServer(progress io.Writer) (int, error) {
 // stdout/stderr e termina com o exit code do JAR. Falhas de execução (jar
 // ausente, java fora do PATH) saem com código 2.
 func runLocal(op string, payload map[string]string, extra []string) error {
-	result, err := invoker.Invoke(localArgs(op, payload, extra)...)
+	args := localArgs(op, payload, extra)
+	tracef("invocando: java -jar assinador.jar %s", strings.Join(args, " "))
+	result, err := invoker.Invoke(args...)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "erro:", err)
 		os.Exit(2)

@@ -42,7 +42,7 @@ automaticamente em ~/.hubsaude/ (US-04.1) se necessario.
 
 Saidas do JVM sao redirecionadas para ~/.hubsaude/simulador.log.`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		return runStart(cmd.OutOrStdout(), startSource, readinessTimeout)
+		return runStart(cmdOut(cmd), startSource, readinessTimeout)
 	},
 }
 
