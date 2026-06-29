@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/DaviAugusto778/IIS-Sistema_Runner-202601/internal/jdk"
 	"github.com/DaviAugusto778/IIS-Sistema_Runner-202601/internal/release"
 	"github.com/DaviAugusto778/IIS-Sistema_Runner-202601/internal/runtime"
 	"github.com/DaviAugusto778/IIS-Sistema_Runner-202601/internal/server"
@@ -22,6 +23,7 @@ const (
 	readinessTimeout = 60 * time.Second
 	readinessPoll    = 500 * time.Millisecond
 	downloadTimeout  = 5 * time.Minute
+	jdkTimeout       = 15 * time.Minute
 )
 
 var startSource string
@@ -35,10 +37,10 @@ livre, lanca java -jar em background, persiste PID/porta em
 ~/.hubsaude/simulador.json e aguarda GET /api/info responder antes
 de declarar o servico pronto.
 
-Saidas do JVM sao redirecionadas para ~/.hubsaude/simulador.log.
+Localiza um JDK 21 na maquina ou provisiona um JRE Temurin
+automaticamente em ~/.hubsaude/ (US-04.1) se necessario.
 
-Pre-requisito: 'java' disponivel no PATH (provisionamento automatico
-de JDK fica para US-04.1).`,
+Saidas do JVM sao redirecionadas para ~/.hubsaude/simulador.log.`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		return runStart(cmd.OutOrStdout(), startSource, readinessTimeout)
 	},
@@ -58,9 +60,12 @@ func runStart(out io.Writer, source string, timeout time.Duration) error {
 		return fmt.Errorf("simulador: porta %d nao disponivel: %w", simuladorPort, err)
 	}
 
-	java, err := exec.LookPath("java")
+	_, _ = fmt.Fprintln(out, "Localizando/provisionando JDK 21...")
+	jdkCtx, jdkCancel := context.WithTimeout(context.Background(), jdkTimeout)
+	defer jdkCancel()
+	java, err := jdk.Ensure(jdkCtx, nil)
 	if err != nil {
-		return fmt.Errorf("simulador: 'java' nao encontrado no PATH (US-04.1 cobrira auto-provisao): %w", err)
+		return fmt.Errorf("simulador: localizar ou provisionar JDK 21: %w", err)
 	}
 
 	_, _ = fmt.Fprintln(out, "Garantindo simulador.jar local...")
