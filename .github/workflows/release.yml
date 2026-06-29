@@ -96,9 +96,59 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+  build-jar:
+    name: build assinador.jar
+    runs-on: ubuntu-latest
+    # O assinador.jar e independente de plataforma: um unico artefato para todos
+    # os SOs, por isso fica fora da matriz (evita 3 jars identicos e 3 assinaturas).
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.7.0
+
+      - name: Make mvnw executable
+        run: chmod +x assinador/mvnw
+
+      - name: Build assinador.jar
+        working-directory: assinador
+        run: ./mvnw -B -ntp package
+
+      - name: Checksum e assinatura do jar
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          # Nome exato esperado pelo CLI (auto-deteccao ao lado do binario): assinador.jar
+          cp assinador/target/assinador.jar dist/assinador.jar
+          ( cd dist && sha256sum assinador.jar > assinador.jar.sha256 )
+          cosign sign-blob --yes \
+            --output-signature dist/assinador.jar.sig \
+            --output-certificate dist/assinador.jar.pem \
+            dist/assinador.jar
+          ls -la dist
+
+      - name: Upload do jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-jar
+          path: dist/*
+          retention-days: 7
+          if-no-files-found: error
+
   publish:
     name: publish GitHub Release
-    needs: build
+    needs: [build, build-jar]
     runs-on: ubuntu-latest
     steps:
       - name: Coleta dos artefatos

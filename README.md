@@ -108,8 +108,10 @@ cosign verify-blob \
 
 O workflow [`.github/workflows/release.yml`](.github/workflows/release.yml) dispara ao
 empurrar uma tag SemVer. Ele compila os seis binários (assinatura + simulador para
-Linux, Windows e macOS amd64), gera os checksums SHA256, assina cada artefato com
-Cosign (keyless) e cria a GitHub Release com todos os arquivos anexados.
+Linux, Windows e macOS amd64) e o `assinador.jar` (independente de plataforma), gera
+os checksums SHA256, assina cada artefato com Cosign (keyless) e cria a GitHub Release
+com todos os arquivos anexados. O `assinador.jar` é publicado com esse nome exato — basta
+colocá-lo ao lado do binário `assinatura` para que seja detectado automaticamente.
 
 ```bash
 git tag v1.0.0
