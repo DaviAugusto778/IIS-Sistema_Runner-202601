@@ -85,16 +85,39 @@ cp assinador/target/assinador.jar .
 
 ### Verificar integridade dos binários baixados
 
+Cada artefato publicado na release acompanha um `.sha256` (integridade) e os arquivos
+`.sig` + `.pem` (autenticidade via Cosign keyless). Os nomes seguem o padrão
+`assinatura-<tag>-<os>-<arch>` (ex.: `assinatura-v1.0.0-linux-amd64`).
+
 ```bash
 # Verificar checksum SHA256
-sha256sum -c assinatura-<versão>-<os>-<arch>.sha256
+sha256sum -c assinatura-v1.0.0-linux-amd64.sha256
 
-# Verificar assinatura Cosign
+# Verificar assinatura Cosign (keyless / OIDC).
+# Os binários são assinados pelo workflow release.yml via OIDC do GitHub Actions,
+# então a verificação exige a identidade do assinante e o emissor do token.
 cosign verify-blob \
-  --certificate assinatura-<versão>-<os>-<arch>.pem \
-  --signature  assinatura-<versão>-<os>-<arch>.sig \
-  assinatura-<versão>-<os>-<arch>
+  --certificate           assinatura-v1.0.0-linux-amd64.pem \
+  --signature             assinatura-v1.0.0-linux-amd64.sig \
+  --certificate-identity-regexp "^https://github.com/DaviAugusto778/IIS-Sistema_Runner-202601/.github/workflows/release.yml@refs/tags/v.*$" \
+  --certificate-oidc-issuer     "https://token.actions.githubusercontent.com" \
+  assinatura-v1.0.0-linux-amd64
 ```
+
+### Publicar uma release (mantenedores)
+
+O workflow [`.github/workflows/release.yml`](.github/workflows/release.yml) dispara ao
+empurrar uma tag SemVer. Ele compila os seis binários (assinatura + simulador para
+Linux, Windows e macOS amd64), gera os checksums SHA256, assina cada artefato com
+Cosign (keyless) e cria a GitHub Release com todos os arquivos anexados.
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+A versão exibida por `version` vem da tag (injetada via `-ldflags`); não há versão
+hardcoded no código nem auto-commit/auto-tag — a release é sempre intencional.
 
 ## Status do projeto
 
