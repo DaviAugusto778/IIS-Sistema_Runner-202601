@@ -85,13 +85,25 @@ assinatura permanece simulado**, conforme o escopo do projeto (ver
 O recurso é **opcional**: só é acionado com `--pkcs11-lib`. Sem ele, o fluxo
 padrão segue inalterado. O PIN é passado por `--token`.
 
+Pelo CLI `assinatura` (o dispositivo é por invocação, então `--pkcs11-lib`
+implica modo local):
+
 ```bash
 # Assina interagindo com o dispositivo (ex.: SoftHSM2)
-java -jar assinador.jar sign --content "documento" \
+./assinatura sign --content "documento" \
   --token 1234 \
   --pkcs11-lib /usr/lib/softhsm/libsofthsm2.so --pkcs11-slot 0
 
-# Modo servidor também aceita as mesmas flags
+# Modo servidor: o dispositivo fica vinculado à instância iniciada
+./assinatura start --pkcs11-lib /usr/lib/softhsm/libsofthsm2.so
+./assinatura sign --content "documento" --token 1234   # usa o dispositivo do servidor
+```
+
+Invocando o JAR diretamente (equivalente, sem o CLI):
+
+```bash
+java -jar assinador.jar sign --content "documento" \
+  --token 1234 --pkcs11-lib /usr/lib/softhsm/libsofthsm2.so --pkcs11-slot 0
 java -jar assinador.jar server --pkcs11-lib /usr/lib/softhsm/libsofthsm2.so
 ```
 
