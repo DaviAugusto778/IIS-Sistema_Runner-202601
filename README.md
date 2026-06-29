@@ -29,10 +29,10 @@ Os documentos oficiais do trabalho estão no repositório do professor, fixados 
 
 | Épico | Descrição | Situação |
 |-------|-----------|----------|
-| US-01 | Invocar assinador.jar via CLI (modo local e modo servidor HTTP) | 🔄 Em andamento |
-| US-02 | Simular assinatura digital com validação rigorosa de parâmetros | 🔄 Em andamento |
-| US-03 | Gerenciar ciclo de vida do Simulador HubSaúde via CLI | ⏳ Pendente |
-| US-04 | Provisionar JDK automaticamente (detecção e download) | 🔄 Em andamento |
+| US-01 | Invocar assinador.jar via CLI (modo local e modo servidor HTTP) | ✅ Concluído |
+| US-02 | Simular assinatura digital com validação rigorosa de parâmetros + PKCS#11 | ✅ Concluído |
+| US-03 | Gerenciar ciclo de vida do Simulador HubSaúde via CLI | ✅ Concluído |
+| US-04 | Provisionar JDK automaticamente (detecção e download) | ✅ Concluído |
 | US-05 | Disponibilizar binários multiplataforma via GitHub Releases | ✅ Concluído |
 
 ## Como rodar
@@ -73,6 +73,31 @@ cp assinador/target/assinador.jar .
 # Iniciar modo servidor HTTP (planejado para Sprint 3 — US-01.5+)
 # ./assinatura start
 ```
+
+### Assinar com dispositivo criptográfico (PKCS#11 — US-02.5)
+
+O `assinador.jar` interage de fato com um token/smart card via a interface
+padrão **PKCS#11** (provider `SunPKCS11` do JDK, sem dependências externas). A
+*interação* com o dispositivo é real (login no token com o PIN); o **valor da
+assinatura permanece simulado**, conforme o escopo do projeto (ver
+[ADR-0005](docs/adr/0005-pkcs11-dispositivo-criptografico.md)).
+
+O recurso é **opcional**: só é acionado com `--pkcs11-lib`. Sem ele, o fluxo
+padrão segue inalterado. O PIN é passado por `--token`.
+
+```bash
+# Assina interagindo com o dispositivo (ex.: SoftHSM2)
+java -jar assinador.jar sign --content "documento" \
+  --token 1234 \
+  --pkcs11-lib /usr/lib/softhsm/libsofthsm2.so --pkcs11-slot 0
+
+# Modo servidor também aceita as mesmas flags
+java -jar assinador.jar server --pkcs11-lib /usr/lib/softhsm/libsofthsm2.so
+```
+
+O teste de integração que comprova chamadas PKCS#11 reais (critério E5) é
+condicional: roda apenas quando há um dispositivo provisionado, apontado pelas
+variáveis `PKCS11_LIBRARY`/`PKCS11_PIN` (instruções em `Pkcs11IntegrationTest`).
 
 ### Executar o CLI `simulador`
 
@@ -127,8 +152,8 @@ hardcoded no código nem auto-commit/auto-tag — a release é sempre intenciona
 |--------|------|-----------|--------|
 | 1 | Fundação: estrutura Go, CI/CD, releases, Cosign | US-01.1, US-05.1, US-05.2, US-05.3 | ✅ Concluída |
 | 2 | Fluxo ponta-a-ponta local: sign/validate via `java -jar` | US-02.1–02.3, US-01.2–01.4, US-04.1 | ✅ Concluída  |
-| 3 | Modo servidor HTTP e dispositivo criptográfico (PKCS#11) | US-02.4–02.5, US-01.5–01.9 | ⏳ Pendente |
-| 4 | CLI simulador e download dinâmico do simulador.jar | US-03.1–03.4 | ⏳ Pendente |
+| 3 | Modo servidor HTTP e dispositivo criptográfico (PKCS#11) | US-02.4–02.5, US-01.5–01.9 | ✅ Concluída |
+| 4 | CLI simulador e download dinâmico do simulador.jar | US-03.1–03.4 | ✅ Concluída |
 
 ## Licença
 
