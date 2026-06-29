@@ -28,7 +28,7 @@ o processo encerrar antes de remover o state file.
 Se o state file não existir ou o PID registrado já estiver morto, o
 comando trata como sucesso (idempotência) e apenas limpa state órfão.`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		return runStop(cmd.OutOrStdout(), shutdownTimeout)
+		return runStop(cmdOut(cmd), shutdownTimeout)
 	},
 }
 

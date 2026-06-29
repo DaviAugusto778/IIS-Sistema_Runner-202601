@@ -64,6 +64,23 @@ Mensagens de progresso e avisos vão para `stderr`, mantendo o `stdout` limpo pa
 logs ficam em **`~/.hubsaude/`** (`assinador.json`, `simulador.json`,
 `assinador.log`, etc.). Portas padrão: **assinador `8080`**, **simulador `8443`**.
 
+**Verbosidade (flags globais):** disponíveis em ambos os CLIs e em qualquer
+subcomando.
+
+| Flag | Efeito |
+|------|--------|
+| `-v`, `--verbose` | Mostra detalhes extras (modo escolhido, comando `java` invocado) em `stderr` |
+| `-q`, `--quiet` | Silencia o progresso/diagnóstico; mantém apenas o **resultado** e os **erros** |
+
+São mutuamente exclusivos. O contrato de saída é preservado em qualquer nível: o
+JSON do resultado (`sign`/`validate`) continua em `stdout`, e o `status` sempre
+imprime sua resposta — `--quiet` afeta só o ruído de diagnóstico.
+
+```bash
+assinatura sign --content "doc" --quiet      # só o JSON; sem progresso em stderr
+assinatura start --verbose                   # passos detalhados da subida do servidor
+```
+
 ---
 
 ## CLI `assinatura`

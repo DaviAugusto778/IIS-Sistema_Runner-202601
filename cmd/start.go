@@ -59,7 +59,7 @@ instância e o PIN é informado por requisição (--token no 'sign').
 
 Saídas do JVM são redirecionadas para ~/.hubsaude/assinador.log.`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		return runStart(cmd.OutOrStdout(), startPort, readinessTimeout, startTimeout,
+		return runStart(cmdOut(cmd), startPort, readinessTimeout, startTimeout,
 			pkcs11JarArgs(startPkcs11Lib, startPkcs11Slot)...)
 	},
 }

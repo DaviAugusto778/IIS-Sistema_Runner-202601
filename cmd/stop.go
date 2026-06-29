@@ -33,7 +33,7 @@ apenas limpa state órfão.
 Com --port <porta>, envia o shutdown diretamente àquela porta — útil para
 encerrar uma instância específica mesmo sem state file.`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		return runStop(cmd.OutOrStdout(), stopPort, shutdownTimeout)
+		return runStop(cmdOut(cmd), stopPort, shutdownTimeout)
 	},
 }
 
