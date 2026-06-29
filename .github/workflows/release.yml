@@ -1,0 +1,172 @@
+name: Release
+
+# US-05: disponibiliza binarios multiplataforma assinados.
+# Dispara ao empurrar uma tag SemVer (ex.: git tag v1.0.0 && git push origin v1.0.0).
+# Nao faz auto-commit nem auto-tag: a release e sempre intencional, criada pela tag.
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write   # criar a GitHub Release e anexar artefatos
+  id-token: write   # OIDC para assinatura keyless do Cosign (secao 9 da especificacao)
+
+jobs:
+  build:
+    name: build (${{ matrix.goos }}/${{ matrix.goarch }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            ext: ""
+          - goos: windows
+            goarch: amd64
+            ext: ".exe"
+          - goos: darwin
+            goarch: amd64
+            ext: ""
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: true
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.7.0
+
+      - name: Build, checksum e assinatura dos binarios
+        shell: bash
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          EXT: ${{ matrix.ext }}
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME}"
+          COMMIT="$(git rev-parse --short HEAD)"
+          DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          MODULE="github.com/DaviAugusto778/IIS-Sistema_Runner-202601"
+
+          mkdir -p dist
+
+          build_sign() {
+            local app="$1" pkg="$2" prefix="$3"
+            local out="dist/${app}-${VERSION}-${GOOS}-${GOARCH}${EXT}"
+            local ldflags="-s -w \
+              -X ${prefix}.Version=${VERSION} \
+              -X ${prefix}.Commit=${COMMIT} \
+              -X ${prefix}.Date=${DATE}"
+
+            echo "==> build ${out}"
+            go build -trimpath -ldflags "${ldflags}" -o "${out}" "${pkg}"
+
+            # SHA256 para verificacao de integridade (US-05)
+            ( cd dist && sha256sum "$(basename "${out}")" > "$(basename "${out}").sha256" )
+
+            # Assinatura keyless via OIDC, registrada no transparency log do Sigstore (secao 9)
+            cosign sign-blob --yes \
+              --output-signature "${out}.sig" \
+              --output-certificate "${out}.pem" \
+              "${out}"
+          }
+
+          # assinatura: pacote cmd dentro do modulo. simulador: package main em ./cmd/simulador.
+          build_sign "assinatura" "." "${MODULE}/cmd"
+          build_sign "simulador" "./cmd/simulador" "main"
+
+          echo "==> artefatos gerados:"
+          ls -la dist
+
+      - name: Upload de artefatos
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/*
+          retention-days: 7
+          if-no-files-found: error
+
+  build-jar:
+    name: build assinador.jar
+    runs-on: ubuntu-latest
+    # O assinador.jar e independente de plataforma: um unico artefato para todos
+    # os SOs, por isso fica fora da matriz (evita 3 jars identicos e 3 assinaturas).
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.7.0
+
+      - name: Make mvnw executable
+        run: chmod +x assinador/mvnw
+
+      - name: Build assinador.jar
+        working-directory: assinador
+        run: ./mvnw -B -ntp package
+
+      - name: Checksum e assinatura do jar
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          # Nome exato esperado pelo CLI (auto-deteccao ao lado do binario): assinador.jar
+          cp assinador/target/assinador.jar dist/assinador.jar
+          ( cd dist && sha256sum assinador.jar > assinador.jar.sha256 )
+          cosign sign-blob --yes \
+            --output-signature dist/assinador.jar.sig \
+            --output-certificate dist/assinador.jar.pem \
+            dist/assinador.jar
+          ls -la dist
+
+      - name: Upload do jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-jar
+          path: dist/*
+          retention-days: 7
+          if-no-files-found: error
+
+  publish:
+    name: publish GitHub Release
+    needs: [build, build-jar]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Coleta dos artefatos
+        uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
+
+      - name: Lista o conjunto a publicar
+        run: ls -la dist
+
+      - name: Cria a GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/*
