@@ -65,6 +65,10 @@ bin/
 # compartilhado, se vier a existir, permanece versionado)
 .claude/settings.local.json
 
+# Contexto local do assistente de IA (guia o trabalho na máquina do autor;
+# não faz parte do produto e fica fora do repositório público)
+CLAUDE.md
+
 # ── Sistema Operacional ───────────────────────────────────────────────────────
 
 # macOS

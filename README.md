@@ -204,6 +204,16 @@ hardcoded no código nem auto-commit/auto-tag — a release é sempre intenciona
 | 3 | Modo servidor HTTP e dispositivo criptográfico (PKCS#11) | US-02.4–02.5, US-01.5–01.9 | ✅ Concluída |
 | 4 | CLI simulador e download dinâmico do simulador.jar | US-03.1–03.4 | ✅ Concluída |
 
+## Uso de Inteligência Artificial
+
+No desenvolvimento deste trabalho foi utilizado um assistente de IA (Claude, da
+Anthropic) como ferramenta de apoio — para revisão de código, geração de testes e
+redação de documentação. Todo o código,
+as decisões de projeto e os artefatos entregues foram **desenvolvidos, revisados, compreendidos
+e validados pelo autor**, que é o responsável final pelo conteúdo do repositório.
+O uso da ferramenta seguiu uma lógica de assistência, não de substituição da
+autoria.
+
 ## Licença
 
 Distribuído sob a [Licença MIT](LICENSE).
